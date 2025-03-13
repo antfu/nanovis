@@ -24,6 +24,12 @@ import {
   strokeRectWithFirefoxBugWorkaround,
   textToHTML,
 } from './helpers'
+import { createNanoEvents } from 'nanoevents'
+
+interface Events {
+  hover: (node: TreeNode | null, e: MouseEvent) => void
+  click: (node: TreeNode, e: MouseEvent) => void
+}
 
 interface TreeNode {
   name_: string
@@ -258,6 +264,8 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   const {
     colorMode = COLOR.DIRECTORY,
   } = options || {}
+
+  const events = createNanoEvents<Events>()
 
   updateColorMapping(metafile, colorMode)
 
@@ -559,27 +567,27 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     }
   }
 
-  let tooltipEl = document.createElement('div')
+  // let tooltipEl = document.createElement('div')
 
-  let showTooltip = (x: number, y: number, html: string): void => {
-    tooltipEl.style.display = 'block'
-    tooltipEl.style.left = x + 'px'
-    tooltipEl.style.top = y + 'px'
-    tooltipEl.innerHTML = html
+  // let showTooltip = (x: number, y: number, html: string): void => {
+  //   tooltipEl.style.display = 'block'
+  //   tooltipEl.style.left = x + 'px'
+  //   tooltipEl.style.top = y + 'px'
+  //   tooltipEl.innerHTML = html
 
-    let right = tooltipEl.offsetWidth
-    for (let el: HTMLElement | null = tooltipEl; el; el = el.offsetParent as HTMLElement | null) {
-      right += el.offsetLeft
-    }
+  //   let right = tooltipEl.offsetWidth
+  //   for (let el: HTMLElement | null = tooltipEl; el; el = el.offsetParent as HTMLElement | null) {
+  //     right += el.offsetLeft
+  //   }
 
-    if (right > width) {
-      tooltipEl.style.left = x + width - right + 'px'
-    }
-  }
+  //   if (right > width) {
+  //     tooltipEl.style.left = x + width - right + 'px'
+  //   }
+  // }
 
-  let hideTooltip = (): void => {
-    tooltipEl.style.display = 'none'
-  }
+  // let hideTooltip = (): void => {
+  //   tooltipEl.style.display = 'none'
+  // }
 
   let hitTestNode = (mouseEvent: MouseEvent | WheelEvent): NodeLayout | null => {
     let visit = (nodes: NodeLayout[], isTopLevel: boolean): NodeLayout | null => {
@@ -609,15 +617,16 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     // Show a tooltip for hovered nodes
     if (layout) {
       let node = layout.node_
-      let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
-      let nameSplit = tooltip.length - node.name_.length
-      tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      tooltip += colorMode === COLOR.FORMAT
-        ? textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
-        : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
-      showTooltip(e.pageX, e.pageY + 20, tooltip)
+      // let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
+      // let nameSplit = tooltip.length - node.name_.length
+      // tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
+      // tooltip += colorMode === COLOR.FORMAT
+      //   ? textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
+      //   : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
+      // showTooltip(e.pageX, e.pageY + 20, tooltip)
+      events.emit('hover', node, e)
     } else {
-      hideTooltip()
+      events.emit('hover', null, e)
     }
   }
 
@@ -655,7 +664,7 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
   canvas.onmouseout = e => {
     changeHoveredNode(null)
-    hideTooltip()
+    events.emit('hover', null, e)
   }
 
   componentEl.onclick = e => {
@@ -663,12 +672,14 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     if (layout) {
       let node = layout.node_
       if (!node.sortedChildren_.length) {
-        showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
+        // events.emit('hover', node, e)
+        events.emit('click', node, e)
+        // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
         updateHover(e)
       } else if (layout !== currentLayout) {
         changeCurrentNode(layout)
         changeHoveredNode(null)
-        hideTooltip()
+         events.emit('click', node, e)
       } else {
         updateHover(e)
       }
@@ -679,7 +690,7 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   }
 
   setWheelEventListener(e => {
-    if (isWhyFileVisible()) return
+    // if (isWhyFileVisible()) return
     updateHover(e)
   })
 
@@ -690,12 +701,12 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   setResizeEventListener(resize)
 
   componentEl.id = styles.treemapPanel
-  tooltipEl.className = indexStyles.tooltip
   mainEl.append(canvas)
-  componentEl.append(mainEl, tooltipEl)
+  componentEl.append(mainEl)
 
   return {
     el: componentEl,
+    events,
     resize,
     draw,
   }

@@ -1,4 +1,4 @@
-import * as styles from './index.css'
+import styles from './index.module.css'
 import './import'
 import './live-reload'
 import { Metafile } from './metafile'

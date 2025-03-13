@@ -1,0 +1,48 @@
+html:not([data-theme=dark]) {
+  --bg: #fff;
+  --fg-on: #000;
+  --fg: #222;
+  --pre-dim: #777;
+  --pre-val: #870;
+  --pre: #222;
+  --bar-min-width: 1px;
+}
+
+html[data-theme=dark] {
+  color-scheme: dark;
+  --bg: #191919;
+  --fg-on: #ddd;
+  --fg: #aaa;
+  --pre-dim: #999;
+  --pre-val: #cb8;
+  --pre: #ccc;
+  --bar-min-width: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme=light]) {
+    color-scheme: dark;
+    --bg: #191919;
+    --fg-on: #ddd;
+    --fg: #aaa;
+    --pre-dim: #999;
+    --pre-val: #cb8;
+    --pre: #ccc;
+    --bar-min-width: 3px;
+  }
+}
+
+body {
+  margin: 50px;
+  font: 16px/20px sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+:global(#startPanel) {
+  margin: 10% auto 0 auto;
+}
+
+:global(#resultsPanel) {
+  display: none;
+}

@@ -686,16 +686,6 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
   })
 
   componentEl.id = styles.sunburstPanel
-  componentEl.innerHTML = ''
-    + `<div class="${indexStyles.summary}">`
-    + '<p>'
-    + 'This visualization shows how much space each input file takes up in the final bundle. '
-    + 'Input files that take up 0 bytes have been completely eliminated by tree-shaking.'
-    + '</p>'
-    + '<p>'
-    + '<b>Benefit of this chart type:</b> Can be navigated with the keyboard.'
-    + '</p>'
-    + '</div>'
   componentEl.append(mainEl)
   return componentEl
 }

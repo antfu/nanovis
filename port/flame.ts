@@ -530,17 +530,6 @@ export let createFlame = (metafile: Metafile): HTMLDivElement => {
   setResizeEventListener(resize)
 
   componentEl.id = styles.flamePanel
-  componentEl.innerHTML = ''
-    + `<div class="${indexStyles.summary}">`
-    + '<p>'
-    + 'This visualization shows which input files were placed into each output file in the bundle. '
-    + 'Use the scroll wheel with the ' + (isMac ? 'command' : 'control') + ' key to zoom in and out.'
-    + '</p>'
-    + '<p>'
-    + '<b>Benefit of this chart type:</b> Best chart for quick mouse navigation.'
-    + '</p>'
-    + '</div>'
-
   tooltipEl.className = indexStyles.tooltip
   mainEl.append(canvas)
   componentEl.append(mainEl, tooltipEl)
