@@ -15,7 +15,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import styles from './treemap.module.css'
+// import styles from './treemap.module.css'
 
 enum CONSTANTS {
   PADDING = 4,
@@ -548,7 +548,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
     disposables.length = 0
   }
 
-  componentEl.id = styles.treemapPanel
+  // componentEl.id = styles.treemapPanel
   mainEl.append(canvas)
   componentEl.append(mainEl)
 

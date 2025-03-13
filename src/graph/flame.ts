@@ -16,7 +16,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import styles from './flame.module.css'
+// import styles from './flame.module.css'
 
 enum CONSTANTS {
   MARGIN = 50,
@@ -399,7 +399,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     disposables.length = 0
   }
 
-  componentEl.id = styles.flamePanel
+  // componentEl.id = styles.flamePanel
   mainEl.append(canvas)
   componentEl.append(mainEl)
 

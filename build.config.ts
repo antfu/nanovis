@@ -9,6 +9,7 @@ export default defineBuildConfig({
   rollup: {
     inlineDependencies: [
       '@antfu/utils',
+      'nanoevents',
     ],
   },
 })
