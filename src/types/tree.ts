@@ -29,6 +29,7 @@ export interface GraphBaseOptions<T> {
   getText?: (node: TreeNode<T>) => string | undefined
   getSubtext?: (node: TreeNode<T>) => string | undefined
   palette?: Partial<Palette>
+  animate?: boolean
 
   onHover?: Events<T>['hover']
   onClick?: Events<T>['click']
@@ -41,8 +42,7 @@ export interface GraphBase<T> {
   events: Emitter<Events<T>>
   draw: () => void
   resize: () => void
-  select: (node: TreeNode<T> | null) => void
-
+  select: (node: TreeNode<T> | null, animate?: boolean) => void
   dispose: () => void
   [Symbol.dispose]: () => void
 }

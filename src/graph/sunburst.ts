@@ -81,19 +81,19 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   let currentNode = tree.root
   let hoveredNode: TreeNode<T> | undefined
 
-  const changeCurrentNode = (node: TreeNode<T> | null): void => {
+  const changeCurrentNode = (node: TreeNode<T> | null, animate?: boolean): void => {
     node = node || tree.root
     if (currentNode !== node) {
       currentNode = node
-      updateSunburst()
+      updateSunburst(animate)
       events.emit('select', node)
     }
   }
 
-  const changeHoveredNode = (node: TreeNode<T> | undefined): void => {
+  const changeHoveredNode = (node: TreeNode<T> | undefined, animate?: boolean): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
-      updateSunburst()
+      updateSunburst(animate)
     }
   }
 
@@ -354,7 +354,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     }
   }
 
-  const updateSunburst = () => {
+  const updateSunburst = (animate: boolean = options.animate ?? true) => {
     if (previousHoveredNode !== hoveredNode) {
       previousHoveredNode = hoveredNode
       if (!hoveredNode) {
@@ -371,7 +371,10 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
 
     if (animationFrame === null)
       animationFrame = requestAnimationFrame(tick)
-    animationStart = now()
+
+    if (animate) {
+      animationStart = now()
+    }
 
     // Animate from parent to child
     if (isParentOf(animatedNode, currentNode)) {
@@ -402,7 +405,6 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
       targetStartAngle = slice.startAngle_
       targetSweepAngle = slice.sweepAngle_
     }
-
     else {
       animationStart = -Infinity
       animatedNode = currentNode
@@ -423,8 +425,8 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     draw,
     resize,
     dispose,
-    select: (node: TreeNode<T> | null) => {
-      changeCurrentNode(node)
+    select: (node: TreeNode<T> | null, animate?: boolean) => {
+      changeCurrentNode(node, animate)
     },
     [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>

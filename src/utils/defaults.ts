@@ -3,6 +3,7 @@ import type { GraphBaseOptions, Palette } from '../types'
 export const DEFAULT_GRAPH_OPTIONS = {
   getText: node => node.text,
   getSubtext: node => node.subtext,
+  animate: true,
 } satisfies GraphBaseOptions<any>
 
 export const DEFAULT_PALETTE: Palette = {

@@ -30,6 +30,7 @@ const options = {
   onClick,
   onHover,
   onLeave,
+  // animate: false,
 }
 const el = useTemplateRef('el')
 

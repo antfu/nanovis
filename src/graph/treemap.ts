@@ -149,6 +149,8 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   let currentWidthCache: Record<number, number> = normalWidthCache
   let currentNode: NodeLayout<T> | null = null
   let currentLayout: NodeLayout<T> | null = null
+  let previousLayout: NodeLayout<T> | null = null
+
   let currentOriginX = 0
   let currentOriginY = 0
   let animationStart = 0
@@ -376,14 +378,19 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
       // Fade out nodes that are not activated
       if (currentLayout) {
         const [x, y, w, h] = node.box
-        c.globalAlpha = 0.6 * (!currentLayout || (!animationSource
-          && nodeContainingTarget && node !== nodeContainingTarget)
+        c.globalAlpha = 0.6 * (!currentLayout || (!animationSource && nodeContainingTarget && node !== nodeContainingTarget)
           ? 1
           : transition)
         c.fillStyle = bgColor
         c.fillRect(x, y, w, h)
         c.globalAlpha = 1
       }
+    }
+
+    // Draw the previous node
+    if (previousLayout) {
+      drawNodeBackground(previousLayout, Culling.Disabled)
+      drawNodeForeground(previousLayout, true)
     }
 
     // Draw the current node on top
@@ -454,16 +461,19 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     return null
   }
 
-  const changeCurrentNode = (node: NodeLayout<T> | null): void => {
+  const changeCurrentNode = (node: NodeLayout<T> | null, animate: boolean = options.animate ?? true): void => {
     if (currentNode !== node) {
-      animationBlend = 0
-      animationStart = now()
-      animationSource = currentNode
+      events.emit('select', node?.node || null)
+      previousLayout = node ? currentLayout : null
+      if (animate) {
+        animationBlend = 0
+        animationStart = now()
+        animationSource = currentNode
+      }
       animationTarget = node
       currentNode = node || searchFor(layoutNodes, currentNode!.node)
       updateCurrentLayout()
       invalidate()
-      events.emit('select', currentNode?.node || null)
     }
   }
 
@@ -511,8 +521,8 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     events,
     resize,
     draw,
-    select: (node: TreeNode<T> | null) => {
-      changeCurrentNode(node ? searchFor(layoutNodes, node) : null)
+    select: (node: TreeNode<T> | null, animate?: boolean) => {
+      changeCurrentNode(node ? searchFor(layoutNodes, node) : null, animate)
     },
     dispose,
     [Symbol.dispose]: dispose,
