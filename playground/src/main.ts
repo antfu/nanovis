@@ -3,7 +3,8 @@ import type { Metafile } from '../../port/metafile'
 import { COLOR, getColorMapping } from '../../port/color'
 import { createFlame } from '../../port/graph/flame'
 import { createSunburst } from '../../port/graph/sunburst'
-import { analyzeDirectoryTree, createTreemap } from '../../port/graph/treemap'
+import { createTreemap } from '../../port/graph/treemap'
+import { analyzeDirectoryTree } from '../../port/metafile-to-tree'
 import data from '../esbuild-github-io-analyze-example-metafile.json'
 import './index.css'
 
@@ -19,7 +20,7 @@ treemap.events.on('hover', (node, e) => {
 })
 document.body.appendChild(treemap.el)
 
-const flame = createFlame(metafile, { colorMapping })
+const flame = createFlame(tree, { colorMapping })
 document.body.appendChild(flame.el)
 
 const sunburst = createSunburst(metafile, { colorMapping })
