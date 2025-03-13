@@ -1,11 +1,11 @@
 import type { Metafile } from './metafile'
-import type { TreeNodeInProgress } from './tree'
+import type { TreeNodeInProgress } from './metafile-to-tree'
 import {
   hueAngleToColor,
   isSourceMapPath,
   stripDisabledPathPrefix,
 } from './helpers'
-import { accumulatePath, orderChildrenBySize } from './tree'
+import { accumulatePath, orderChildrenBySize } from './metafile-to-tree'
 
 export enum COLOR {
   NONE = 0,

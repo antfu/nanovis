@@ -1,7 +1,7 @@
 import type {
   ColorMapping,
 } from '../color'
-import type { Tree, TreeNode } from '../metafile-to-tree'
+import type { Events, Tree, TreeNode } from '../types'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
@@ -17,11 +17,6 @@ import {
   useWheelEventListener,
 } from '../helpers'
 import styles from './flame.module.css'
-
-export interface Events {
-  hover: (node: TreeNode | null, e: MouseEvent) => void
-  click: (node: TreeNode, e: MouseEvent) => void
-}
 
 enum CONSTANTS {
   MARGIN = 50,
@@ -241,28 +236,6 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
       animationFrame = requestAnimationFrame(draw)
   }
 
-  // const tooltipEl = document.createElement('div')
-
-  // const showTooltip = (x: number, y: number, html: string): void => {
-  //   tooltipEl.style.display = 'block'
-  //   tooltipEl.style.left = x + 'px'
-  //   tooltipEl.style.top = y + 'px'
-  //   tooltipEl.innerHTML = html
-
-  //   let right = tooltipEl.offsetWidth
-  //   for (let el: HTMLElement | null = tooltipEl; el; el = el.offsetParent as HTMLElement | null) {
-  //     right += el.offsetLeft
-  //   }
-
-  //   if (right > width) {
-  //     tooltipEl.style.left = x + width - right + 'px'
-  //   }
-  // }
-
-  // let hideTooltip = (): void => {
-  //   tooltipEl.style.display = 'none'
-  // }
-
   const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): TreeNode | null => {
     const visit = (node: TreeNode, y: number, startBytes: number): TreeNode | null => {
       if (mouseBytes >= startBytes && mouseBytes < startBytes + node.bytesInOutput_) {
@@ -341,20 +314,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     changeHoveredNode(node, e)
 
     // Show a tooltip for hovered nodes
-    if (node) {
-      events.emit('hover', node, e)
-      // let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
-      // const nameSplit = tooltip.length - node.name_.length
-      // tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      // tooltip += colorMode === COLOR.FORMAT
-      //   ? textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
-      //   : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
-      // showTooltip(e.pageX, e.pageY + 20, tooltip)
-    }
-    else {
-      events.emit('hover', null, e)
-      // hideTooltip()
-    }
+    events.emit('hover', node, e)
   }
 
   let didDrag = false
@@ -403,12 +363,10 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
     if (node && !node.sortedChildren_.length) {
       events.emit('click', node, e)
-      // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
     }
   }
 
   disposables.push(useWheelEventListener((e) => {
-    // if (isWhyFileVisible()) return
     // This compares with the time of the previous zoom to implement "zoom
     // locking" to prevent zoom from changing to scroll if you zoom by
     // flicking on the touchpad with a key pressed but release the key while

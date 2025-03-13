@@ -1,6 +1,5 @@
 import type { ColorMapping } from '../color'
-import type { Metafile } from '../metafile'
-import type { TreeNodeInProgress } from '../tree'
+import type { Events, Tree, TreeNode } from '../types'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
@@ -10,23 +9,15 @@ import {
 } from '../color'
 import {
   bytesToText,
-  isSourceMapPath,
   lastInteractionWasKeyboard,
   now,
   shortenDataURLForDisplay,
-  stripDisabledPathPrefix,
   textToHTML,
   useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
 } from '../helpers'
-import { accumulatePath, orderChildrenBySize } from '../tree'
 import styles from './sunburst.module.css'
-
-export interface Events {
-  hover: (node: TreeNode | null, e?: MouseEvent) => void
-  click: (node: TreeNode, e: MouseEvent) => void
-}
 
 enum CONSTANTS {
   ANIMATION_DURATION = 350,
@@ -39,18 +30,6 @@ enum FLAGS {
   HOVER = 8,
 }
 
-interface TreeNode {
-  inputPath_: string
-  bytesInOutput_: number
-  sortedChildren_: TreeNode[]
-  parent_: TreeNode | null
-}
-
-interface Tree {
-  root_: TreeNode
-  maxDepth_: number
-}
-
 function isParentOf(parent: TreeNode, child: TreeNode | null): boolean {
   while (child) {
     if (child === parent)
@@ -58,68 +37,6 @@ function isParentOf(parent: TreeNode, child: TreeNode | null): boolean {
     child = child.parent_
   }
   return false
-}
-
-function analyzeDirectoryTree(metafile: Metafile): Tree {
-  const inputs = metafile.inputs
-  const outputs = metafile.outputs
-  const root: TreeNodeInProgress = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
-
-  const sortChildren = (node: TreeNodeInProgress): TreeNode => {
-    const children = node.children_
-    const sorted: TreeNode[] = []
-    for (const file in children) {
-      sorted.push(sortChildren(children[file]))
-    }
-    return {
-      inputPath_: node.inputPath_,
-      bytesInOutput_: node.bytesInOutput_,
-      sortedChildren_: sorted.sort(orderChildrenBySize),
-      parent_: null,
-    }
-  }
-
-  const setParents = (node: TreeNode, depth: number): number => {
-    let maxDepth = 0
-    for (const child of node.sortedChildren_) {
-      const childDepth = setParents(child, depth + 1)
-      child.parent_ = node
-      if (childDepth > maxDepth)
-        maxDepth = childDepth
-    }
-    return maxDepth + 1
-  }
-
-  // Include the inputs with size 0 so we can see when something has been tree-shaken
-  for (const i in inputs) {
-    accumulatePath(root, stripDisabledPathPrefix(i), 0)
-  }
-
-  // For each output file
-  for (const o in outputs) {
-    if (isSourceMapPath(o))
-      continue
-
-    const output = outputs[o]
-    const inputs = output.inputs
-
-    // Accumulate the input files that contributed to this output file
-    for (const i in inputs) {
-      accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
-    }
-  }
-
-  let finalRoot = sortChildren(root)
-
-  // Unwrap singularly-nested root nodes
-  while (finalRoot.sortedChildren_.length === 1) {
-    finalRoot = finalRoot.sortedChildren_[0]
-  }
-
-  return {
-    root_: finalRoot,
-    maxDepth_: setParents(finalRoot, 0),
-  }
 }
 
 interface Slice {
@@ -158,17 +75,23 @@ export interface CreateSunburstOptions {
   colorMode?: COLOR
 }
 
-export function createSunburst(metafile: Metafile, options?: CreateSunburstOptions) {
+export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
   const {
     colorMapping = {},
     colorMode = COLOR.DIRECTORY,
   } = options || {}
 
+  while (tree.root_.sortedChildren_.length === 1) {
+    tree = {
+      root_: tree.root_.sortedChildren_[0],
+      maxDepth_: tree.maxDepth_ - 1,
+    }
+  }
+
   const events = createNanoEvents<Events>()
   const disposables: (() => void)[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
-  const tree = analyzeDirectoryTree(metafile)
   let currentNode = tree.root_
   let hoveredNode: TreeNode | null = null
 
@@ -392,19 +315,6 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
       draw()
     }
 
-    // const tooltipEl = document.createElement('div')
-
-    // const showTooltip = (x: number, y: number, html: string): void => {
-    //   tooltipEl.style.display = 'block'
-    //   tooltipEl.style.left = x + 'px'
-    //   tooltipEl.style.top = y + 'px'
-    //   tooltipEl.innerHTML = html
-    // }
-
-    // const hideTooltip = (): void => {
-    //   tooltipEl.style.display = 'none'
-    // }
-
     let previousHoveredNode: TreeNode | null = null
     let historyStack: TreeNode[] = []
 
@@ -414,22 +324,11 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
 
       // Show a tooltip for hovered nodes
       if (node && node !== animatedNode.parent_) {
-        // let tooltip = node.inputPath_
-        // if (node.parent_ && node.parent_.inputPath_ !== '') {
-        //   const i = node.parent_.inputPath_.length
-        //   tooltip = textToHTML(tooltip.slice(0, i)) + '<b>' + textToHTML(tooltip.slice(i)) + '</b>'
-        // } else {
-        //   tooltip = '<b>' + textToHTML(shortenDataURLForDisplay(tooltip)) + '</b>'
-        // }
-        // if (colorMode === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
-        // else tooltip += ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
-        // showTooltip(e.pageX, e.pageY + 20, tooltip)
         events.emit('hover', node, e)
         canvas.style.cursor = 'pointer'
       }
       else {
         events.emit('hover', null, e)
-        // hideTooltip()
       }
     }
 
@@ -445,7 +344,6 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
 
     canvas.onmouseout = (e) => {
       changeHoveredNode(null)
-      // hideTooltip()
       events.emit('hover', null, e)
     }
 
@@ -453,7 +351,6 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
       let node = hitTestNode(e)
       if (!node)
         return
-      // hideTooltip()
       events.emit('click', node, e)
 
       let stack: TreeNode[] = []
@@ -474,7 +371,6 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
       else {
         e.preventDefault() // Prevent the browser from removing the focus on the dialog
         events.emit('click', node, e)
-        // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
       }
     }
 
@@ -487,7 +383,6 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
         previousHoveredNode = hoveredNode
         if (!hoveredNode) {
           canvas.style.cursor = 'auto'
-          // hideTooltip()
           events.emit('hover', null)
         }
         if (animationFrame === null)
@@ -635,7 +530,6 @@ export function createSunburst(metafile: Metafile, options?: CreateSunburstOptio
           }
           else {
             events.emit('click', child, e)
-            // showWhyFile(metafile, child.inputPath_, child.bytesInOutput_)
           }
         }
         rowEl.onfocus = rowEl.onmouseover = () => changeHoveredNode(child)

@@ -1,28 +1,12 @@
 import type { Metafile } from './metafile'
-import type { TreeNodeInProgress } from './tree'
-import { bytesToText, commonPrefixFinder, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from './helpers'
-import { accumulatePath, orderChildrenBySize } from './tree'
-
-export interface TreeNode {
-  name_: string
-  inputPath_: string
-  sizeText_: string
-  bytesInOutput_: number
-  sortedChildren_: TreeNode[]
-  isOutputFile_: boolean
-}
-
-export interface Tree {
-  root_: TreeNode
-  maxDepth_: number
-}
+import type { Tree, TreeNode } from './types'
+import { bytesToText, commonPrefixFinder, hasOwnProperty, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from './helpers'
 
 export function analyzeDirectoryTree(metafile: Metafile): Tree {
   const outputs = metafile.outputs
-  let totalBytes = 0
-  let maxDepth = 0
   const nodes: TreeNode[] = []
   let commonPrefix: string[] | undefined
+  const root: TreeNodeInProgress = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
 
   const sortChildren = (node: TreeNodeInProgress, isOutputFile: boolean): TreeNode => {
     const children = node.children_
@@ -37,10 +21,27 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
       bytesInOutput_: node.bytesInOutput_,
       sortedChildren_: sorted.sort(orderChildrenBySize),
       isOutputFile_: isOutputFile,
+      parent_: null,
     }
   }
 
-  for (const o in outputs) {
+  const setParents = (node: TreeNode, depth: number): number => {
+    let maxDepth = 0
+    for (const child of node.sortedChildren_) {
+      const childDepth = setParents(child, depth + 1)
+      child.parent_ = node
+      if (childDepth > maxDepth)
+        maxDepth = childDepth
+    }
+    return maxDepth + 1
+  }
+
+  // Include the inputs with size 0 so we can see when something has been tree-shaken
+  for (const i in metafile.inputs) {
+    accumulatePath(root, stripDisabledPathPrefix(i), 0)
+  }
+
+  for (const o in metafile.outputs) {
     // Find the common directory prefix, not including the file name
     const parts = splitPathBySlash(o)
     parts.pop()
@@ -59,13 +60,10 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
 
     // Accumulate the input files that contributed to this output file
     for (const i in inputs) {
-      const depth = accumulatePath(node, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
-      if (depth > maxDepth)
-        maxDepth = depth
+      accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
     }
 
     node.bytesInOutput_ = bytes
-    totalBytes += bytes
     nodes.push(sortChildren(node, true))
   }
 
@@ -92,11 +90,11 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
       let children = node.sortedChildren_
       if (children.length) {
         children = children[0].sortedChildren_
-        for (const child of children) child.name_ = prefix + child.name_
+        for (const child of children)
+          child.name_ = prefix + child.name_
         node.sortedChildren_ = children
       }
     }
-    maxDepth--
   }
 
   // Add entries for the remaining space in each chunk
@@ -113,20 +111,58 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
         bytesInOutput_: node.bytesInOutput_ - childBytes,
         sortedChildren_: [],
         isOutputFile_: false,
+        parent_: node,
       })
     }
   }
 
   nodes.sort(orderChildrenBySize)
+
+  const finalRoot = sortChildren(root, false)
   return {
-    root_: {
-      name_: '',
-      inputPath_: '',
-      sizeText_: '',
-      bytesInOutput_: totalBytes,
-      sortedChildren_: nodes,
-      isOutputFile_: false,
-    },
-    maxDepth_: maxDepth + 1,
+    root_: finalRoot,
+    maxDepth_: setParents(finalRoot, 0),
   }
+}
+
+export interface TreeNodeInProgress {
+  name_: string
+  inputPath_: string
+  bytesInOutput_: number
+  children_: Record<string, TreeNodeInProgress>
+}
+
+export function orderChildrenBySize(a: { inputPath_: string, bytesInOutput_: number }, b: { inputPath_: string, bytesInOutput_: number }): number {
+  return b.bytesInOutput_ - a.bytesInOutput_ || +(a.inputPath_ > b.inputPath_) - +(a.inputPath_ < b.inputPath_)
+}
+
+export function accumulatePath(root: TreeNodeInProgress, path: string, bytesInOutput: number): number {
+  const parts = splitPathBySlash(path)
+  const n = parts.length
+  let parent = root
+  let inputPath = ''
+  root.bytesInOutput_ += bytesInOutput
+
+  for (let i = 0; i < n; i++) {
+    const part = parts[i]
+    const children = parent.children_
+    let child = children[part]
+    const name = part + (i + 1 < n ? '/' : '')
+    inputPath += name
+
+    if (!hasOwnProperty.call(children, part)) {
+      child = {
+        name_: name,
+        inputPath_: inputPath,
+        bytesInOutput_: 0,
+        children_: {},
+      }
+      children[part] = child
+    }
+
+    child.bytesInOutput_ += bytesInOutput
+    parent = child
+  }
+
+  return n
 }

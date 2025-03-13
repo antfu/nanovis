@@ -23,5 +23,5 @@ document.body.appendChild(treemap.el)
 const flame = createFlame(tree, { colorMapping })
 document.body.appendChild(flame.el)
 
-const sunburst = createSunburst(metafile, { colorMapping })
+const sunburst = createSunburst(tree, { colorMapping })
 document.body.appendChild(sunburst.el)
