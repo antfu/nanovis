@@ -1,8 +1,9 @@
 import type {
-  ColorMapping} from '../color';
+  ColorMapping,
+} from '../color'
 import type { Metafile } from '../metafile'
-import type { TreeNodeInProgress } from '../tree';
-import { createNanoEvents } from 'nanoevents';
+import type { TreeNodeInProgress } from '../tree'
+import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
   COLOR,
@@ -58,7 +59,7 @@ interface Tree {
   maxDepth_: number
 }
 
-function analyzeDirectoryTree (metafile: Metafile): Tree {
+function analyzeDirectoryTree(metafile: Metafile): Tree {
   const outputs = metafile.outputs
   let totalBytes = 0
   let maxDepth = 0
@@ -92,7 +93,8 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
   }
 
   for (const o in outputs) {
-    if (isSourceMapPath(o)) continue
+    if (isSourceMapPath(o))
+      continue
 
     const name = commonPrefix ? splitPathBySlash(o).slice(commonPrefix.length).join('/') : o
     const node: TreeNodeInProgress = { name_: name, inputPath_: '', bytesInOutput_: 0, children_: {} }
@@ -103,7 +105,8 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
     // Accumulate the input files that contributed to this output file
     for (const i in inputs) {
       const depth = accumulatePath(node, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
-      if (depth > maxDepth) maxDepth = depth
+      if (depth > maxDepth)
+        maxDepth = depth
     }
 
     node.bytesInOutput_ = bytes
@@ -116,13 +119,18 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
     let prefix: string | undefined
     for (const node of nodes) {
       const children = node.sortedChildren_
-      if (!children.length) continue
-      if (children.length > 1 || children[0].sortedChildren_.length !== 1) break stop
+      if (!children.length)
+        continue
+      if (children.length > 1 || children[0].sortedChildren_.length !== 1)
+        break stop
       const name = children[0].name_
-      if (prefix === undefined) prefix = name
-      else if (prefix !== name) break stop
+      if (prefix === undefined)
+        prefix = name
+      else if (prefix !== name)
+        break stop
     }
-    if (prefix === undefined) break
+    if (prefix === undefined)
+      break
 
     // Remove one level
     for (const node of nodes) {
@@ -166,12 +174,12 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
   }
 }
 
-export interface CreateFlameOptions {    
+export interface CreateFlameOptions {
   colorMapping?: ColorMapping
   colorMode?: COLOR
 }
 
-export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
+export function createFlame(metafile: Metafile, options?: CreateFlameOptions) {
   const {
     colorMapping = {},
     colorMode = COLOR.DIRECTORY,
@@ -228,8 +236,10 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     height = tree.maxDepth_ * CONSTANTS.ROW_HEIGHT + 1
     zoomedOutMin = (width - CONSTANTS.ZOOMED_OUT_WIDTH) >> 1
     zoomedOutWidth = zoomedOutMin + CONSTANTS.ZOOMED_OUT_WIDTH
-    if (zoomedOutMin < 0) zoomedOutMin = 0
-    if (zoomedOutWidth > width) zoomedOutWidth = width
+    if (zoomedOutMin < 0)
+      zoomedOutMin = 0
+    if (zoomedOutWidth > width)
+      zoomedOutWidth = width
     zoomedOutWidth -= zoomedOutMin
     stripeScaleAdjust = totalBytes / zoomedOutWidth
     canvas.style.width = width + 'px'
@@ -247,7 +257,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     let i = 0
     while (i < n) {
       textWidth += charCodeWidth(text.charCodeAt(i))
-      if (textWidth > width) break
+      if (textWidth > width)
+        break
       i++
     }
     return text.slice(0, i) + '...'
@@ -262,8 +273,10 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     const x = zoomedOutMin + (startBytes - viewportMin) * scale
     const w = node.bytesInOutput_ * scale
     const rightEdge = x + w
-    if (rightEdge < prevRightEdge + 1.5) return prevRightEdge
-    if (x + w < 0 || x > width) return rightEdge
+    if (rightEdge < prevRightEdge + 1.5)
+      return prevRightEdge
+    if (x + w < 0 || x > width)
+      return rightEdge
 
     const rectWidth = w < 2 ? 2 : w
     const textX = (x > 0 ? x : 0) + CONSTANTS.TEXT_INDENT
@@ -274,8 +287,7 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     let typesetX = 0
     const typesetW = w + x - textX
     const fillColor = node.inputPath_
-      ? canvasFillStyleForInputPath(colorMapping, c, node.inputPath_,
-        zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
+      ? canvasFillStyleForInputPath(colorMapping, c, node.inputPath_, zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
       : otherColor
     let textColor = 'black'
     let childRightEdge = -Infinity
@@ -285,7 +297,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
       c.font = boldFont
       currentWidthCache = boldWidthCache
       ellipsisWidth = 3 * charCodeWidth(CONSTANTS.DOT_CHAR_CODE)
-    } else {
+    }
+    else {
       c.fillStyle = fillColor
       c.fillRect(x, y, rectWidth, CONSTANTS.ROW_HEIGHT)
 
@@ -303,7 +316,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
       measuredW = c.measureText(nameText).width
       if (measuredW <= typesetW) {
         typesetX += measuredW
-      } else {
+      }
+      else {
         nameText = textOverflowEllipsis(nameText, typesetW)
         typesetX = typesetW
       }
@@ -362,7 +376,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
   }
 
   let invalidate = (): void => {
-    if (animationFrame === null) animationFrame = requestAnimationFrame(draw)
+    if (animationFrame === null)
+      animationFrame = requestAnimationFrame(draw)
   }
 
   // const tooltipEl = document.createElement('div')
@@ -397,7 +412,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
         if (mouseY >= y + CONSTANTS.ROW_HEIGHT) {
           for (const child of node.sortedChildren_) {
             const result = visit(child, y + CONSTANTS.ROW_HEIGHT, startBytes)
-            if (result) return result
+            if (result)
+              return result
             startBytes += child.bytesInOutput_
           }
         }
@@ -417,7 +433,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
     for (const child of tree.root_.sortedChildren_) {
       const result = visit(child, 0, startBytes)
-      if (result) return result
+      if (result)
+        return result
       startBytes += child.bytesInOutput_
     }
 
@@ -431,20 +448,25 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
     if (xForZoom !== null) {
       const mouse = min + (max - min) / zoomedOutWidth * (xForZoom - zoomedOutMin)
-      const scale = 1.01**deltaY
+      const scale = 1.01 ** deltaY
       min = mouse + (min - mouse) * scale
       max = mouse + (max - mouse) * scale
-    } else {
+    }
+    else {
       translate = deltaX * (max - min) / zoomedOutWidth
     }
 
-    if (min + translate < 0) translate = -min
-    else if (max + translate > totalBytes) translate = totalBytes - max
+    if (min + translate < 0)
+      translate = -min
+    else if (max + translate > totalBytes)
+      translate = totalBytes - max
     min += translate
     max += translate
 
-    if (min < 0) min = 0
-    if (max > totalBytes) max = totalBytes
+    if (min < 0)
+      min = 0
+    if (max > totalBytes)
+      max = totalBytes
 
     if (viewportMin !== min || viewportMax !== max) {
       viewportMin = min
@@ -467,7 +489,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
       //   ? textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
       //   : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
       // showTooltip(e.pageX, e.pageY + 20, tooltip)
-    } else {
+    }
+    else {
       events.emit('hover', null, e)
       // hideTooltip()
     }
@@ -475,7 +498,7 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
   let didDrag = false
 
-  canvas.onmousedown = e => {
+  canvas.onmousedown = (e) => {
     didDrag = false
 
     if (e.button !== 2) {
@@ -483,7 +506,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
       const move = (e: MouseEvent): void => {
         const deltaX = e.pageX - oldX
-        if (!didDrag && Math.abs(deltaX) < 3) return
+        if (!didDrag && Math.abs(deltaX) < 3)
+          return
         didDrag = true
         modifyViewport(-deltaX, 0, null)
         oldX = e.pageX
@@ -500,7 +524,7 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     }
   }
 
-  canvas.onmousemove = e => {
+  canvas.onmousemove = (e) => {
     updateHover(e)
   }
 
@@ -508,9 +532,10 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     changeHoveredNode(null, e)
   }
 
-  canvas.onclick = e => {
+  canvas.onclick = (e) => {
     // Don't trigger on mouse up after a drag
-    if (didDrag) return
+    if (didDrag)
+      return
 
     const node = hitTestNode(e)
     changeHoveredNode(node, e)
@@ -521,8 +546,7 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     }
   }
 
-
-  disposables.push(useWheelEventListener(e => {
+  disposables.push(useWheelEventListener((e) => {
     // if (isWhyFileVisible()) return
     // This compares with the time of the previous zoom to implement "zoom
     // locking" to prevent zoom from changing to scroll if you zoom by
@@ -547,8 +571,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
-  
-  disposables.push(useDarkModeListener(draw)) 
+
+  disposables.push(useDarkModeListener(draw))
   disposables.push(useResizeEventListener(resize))
 
   function dispose() {

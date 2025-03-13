@@ -10,7 +10,7 @@ import { showWhyFile } from './whyfile'
 
 let previousMetafile: Metafile | undefined
 
-function generateWarnings (metafile: Metafile): HTMLElement[] {
+function generateWarnings(metafile: Metafile): HTMLElement[] {
   const inputs = metafile.inputs
   const resolvedPaths: Record<string, string[]> = {}
   const warnings: HTMLElement[] = []
@@ -20,7 +20,8 @@ function generateWarnings (metafile: Metafile): HTMLElement[] {
     for (const record of input.imports) {
       if (record.original && record.original[0] !== '.') {
         const array = resolvedPaths[record.original] || (resolvedPaths[record.original] = [])
-        if (!array.includes(record.path)) array.push(record.path)
+        if (!array.includes(record.path))
+          array.push(record.path)
       }
     }
   }
@@ -43,7 +44,8 @@ function generateWarnings (metafile: Metafile): HTMLElement[] {
 
       for (const path of array) {
         let parts = splitPathBySlash(path)
-        if (commonPrefix) parts = parts.slice(commonPrefix.length)
+        if (commonPrefix)
+          parts = parts.slice(commonPrefix.length)
         commonPostfix = commonPostfixFinder(parts.join('/'), commonPostfix)
       }
 
@@ -87,8 +89,9 @@ function generateWarnings (metafile: Metafile): HTMLElement[] {
   return warnings
 }
 
-export function showWarningsPanel (metafile: Metafile): void {
-  if (previousMetafile === metafile) return
+export function showWarningsPanel(metafile: Metafile): void {
+  if (previousMetafile === metafile)
+    return
   previousMetafile = metafile
 
   const warningsPanel = document.getElementById('warningsPanel') as HTMLDivElement
@@ -111,12 +114,14 @@ export function showWarningsPanel (metafile: Metafile): void {
       if (contentEl.style.display === 'block') {
         spanEl.textContent = '.'
         contentEl.style.display = 'none'
-      } else {
+      }
+      else {
         spanEl.textContent = ':'
         contentEl.style.display = 'block'
       }
     }
-  } else {
+  }
+  else {
     warningsPanel.innerHTML = ''
   }
 }

@@ -1,7 +1,8 @@
 import type {
-  ColorMapping} from '../color';
+  ColorMapping,
+} from '../color'
 import type { Metafile } from '../metafile'
-import type { TreeNodeInProgress} from '../tree';
+import type { TreeNodeInProgress } from '../tree'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
@@ -62,7 +63,7 @@ enum DrawFlags {
 enum Culling {
   Disabled,
   Enabled,
-  Culled
+  Culled,
 }
 
 export function analyzeDirectoryTree(metafile: Metafile): Tree {
@@ -96,7 +97,8 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
   }
 
   for (const o in outputs) {
-    if (isSourceMapPath(o)) continue
+    if (isSourceMapPath(o))
+      continue
 
     const name = commonPrefix ? splitPathBySlash(o).slice(commonPrefix.length).join('/') : o
     const node: TreeNodeInProgress = { name_: name, inputPath_: '', bytesInOutput_: 0, children_: {} }
@@ -107,7 +109,8 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
     // Accumulate the input files that contributed to this output file
     for (const i in inputs) {
       const depth = accumulatePath(node, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
-      if (depth > maxDepth) maxDepth = depth
+      if (depth > maxDepth)
+        maxDepth = depth
     }
 
     node.bytesInOutput_ = bytes
@@ -120,13 +123,18 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
     let prefix: string | undefined
     for (const node of nodes) {
       const children = node.sortedChildren_
-      if (!children.length) continue
-      if (children.length > 1 || children[0].sortedChildren_.length !== 1) break stop
+      if (!children.length)
+        continue
+      if (children.length > 1 || children[0].sortedChildren_.length !== 1)
+        break stop
       const name = children[0].name_
-      if (prefix === undefined) prefix = name
-      else if (prefix !== name) break stop
+      if (prefix === undefined)
+        prefix = name
+      else if (prefix !== name)
+        break stop
     }
-    if (prefix === undefined) break
+    if (prefix === undefined)
+      break
 
     // Remove one level
     for (const node of nodes) {
@@ -208,7 +216,8 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
       while (end < sortedChildren.length) {
         const area = sortedChildren[end].bytesInOutput_ * bytesToArea
         const newWorst = worst(start, end, shortestSide, areaInRun + area, bytesToArea)
-        if (end > start && oldWorst < newWorst) break
+        if (end > start && oldWorst < newWorst)
+          break
         areaInRun += area
         oldWorst = newWorst
         end++
@@ -230,11 +239,12 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
           box_: [cx, cy, cw, ch],
           children_: cw > CONSTANTS.INSET_X && ch > CONSTANTS.INSET_Y
             ? layoutTreemap(
-              child.sortedChildren_,
-              cx + CONSTANTS.PADDING,
-              cy + CONSTANTS.HEADER_HEIGHT,
-              cw - CONSTANTS.INSET_X,
-              ch - CONSTANTS.INSET_Y)
+                child.sortedChildren_,
+                cx + CONSTANTS.PADDING,
+                cy + CONSTANTS.HEADER_HEIGHT,
+                cw - CONSTANTS.INSET_X,
+                ch - CONSTANTS.INSET_Y,
+              )
             : [],
         })
         areaInLayout += area
@@ -245,7 +255,8 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
       if (w >= h) {
         x += split
         w -= split
-      } else {
+      }
+      else {
         y += split
         h -= split
       }
@@ -268,7 +279,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   } = options || {}
 
   const events = createNanoEvents<Events>()
-  const disposables: (()=>void)[] = []
+  const disposables: (() => void)[] = []
   let layoutNodes: NodeLayout[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
@@ -313,7 +324,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       currentLayout = layoutTreemap([currentNode.node_], x1, y1, x2 - x1, y2 - y1)[0]
       currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
       currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
-    } else {
+    }
+    else {
       currentLayout = null
       currentOriginX = 0
       currentOriginY = 0
@@ -348,7 +360,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       currentNode = animationTarget
       animationBlend = 1
       animationFrame = null
-    } else {
+    }
+    else {
       // Use a cubic "ease-out" curve
       animationBlend = 1 - animationBlend
       animationBlend *= animationBlend * animationBlend
@@ -363,7 +376,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   }
 
   const invalidate = (): void => {
-    if (animationFrame === null) animationFrame = requestAnimationFrame(tick)
+    if (animationFrame === null)
+      animationFrame = requestAnimationFrame(tick)
   }
 
   const charCodeWidth = (ch: number): number => {
@@ -376,7 +390,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   }
 
   const textOverflowEllipsis = (text: string, width: number): [string, number] => {
-    if (width < ellipsisWidth) return ['', 0]
+    if (width < ellipsisWidth)
+      return ['', 0]
     let textWidth = 0
     const n = text.length
     let i = 0
@@ -394,9 +409,9 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   const drawNodeBackground = (layout: NodeLayout, culling: Culling): DrawFlags => {
     const node = layout.node_
     const [x, y, w, h] = layout.box_
-    let flags =
-      (node === hoveredNode ? DrawFlags.CONTAINS_HOVER : 0) |
-      (layout === animationTarget ? DrawFlags.CONTAINS_TARGET : 0)
+    let flags
+      = (node === hoveredNode ? DrawFlags.CONTAINS_HOVER : 0)
+        | (layout === animationTarget ? DrawFlags.CONTAINS_TARGET : 0)
 
     // Improve performance by not drawing backgrounds unnecessarily
     if (culling === Culling.Enabled && currentLayout) {
@@ -418,7 +433,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
         c.fillRect(x, y + h - CONSTANTS.PADDING, w, CONSTANTS.PADDING)
         c.fillRect(x, y + CONSTANTS.HEADER_HEIGHT, CONSTANTS.PADDING, h - CONSTANTS.INSET_Y)
         c.fillRect(x + w - CONSTANTS.PADDING, y + CONSTANTS.HEADER_HEIGHT, CONSTANTS.PADDING, h - CONSTANTS.INSET_Y)
-      } else {
+      }
+      else {
         // Fill in the whole node if there are no children
         c.fillRect(x, y, w, h)
       }
@@ -522,13 +538,18 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
     // Draw the full tree first
     let nodeContainingHover: NodeLayout | null = null
     let nodeContainingTarget: NodeLayout | null = null
-    const transition = !currentLayout ? 0 : !animationSource
-      ? animationBlend : !animationTarget ? 1 - animationBlend : 1
+    const transition = !currentLayout
+      ? 0
+      : !animationSource
+          ? animationBlend
+          : !animationTarget ? 1 - animationBlend : 1
     bgOriginX = bgOriginY = 0
     for (const node of layoutNodes) {
       const flags = drawNodeBackground(node, Culling.Enabled)
-      if (flags & DrawFlags.CONTAINS_HOVER) nodeContainingHover = node
-      if (flags & DrawFlags.CONTAINS_TARGET) nodeContainingTarget = node
+      if (flags & DrawFlags.CONTAINS_HOVER)
+        nodeContainingHover = node
+      if (flags & DrawFlags.CONTAINS_TARGET)
+        nodeContainingTarget = node
     }
     for (const node of layoutNodes) {
       drawNodeForeground(node, false)
@@ -536,8 +557,10 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       // Fade out nodes that aren't being hovered
       if (currentLayout || (nodeContainingHover && node !== nodeContainingHover)) {
         const [x, y, w, h] = node.box_
-        c.globalAlpha = 0.6 * (!currentLayout || (!animationSource &&
-          nodeContainingTarget && node !== nodeContainingTarget) ? 1 : transition)
+        c.globalAlpha = 0.6 * (!currentLayout || (!animationSource
+          && nodeContainingTarget && node !== nodeContainingTarget)
+          ? 1
+          : transition)
         c.fillStyle = bgColor
         c.fillRect(x, y, w, h)
         c.globalAlpha = 1
@@ -624,7 +647,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       //   : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
       // showTooltip(e.pageX, e.pageY + 20, tooltip)
       events.emit('hover', node, e)
-    } else {
+    }
+    else {
       events.emit('hover', null, e)
     }
   }
@@ -640,7 +664,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   const searchFor = (children: NodeLayout[], node: TreeNode): NodeLayout | null => {
     for (const child of children) {
       const result = child.node_ === node ? child : searchFor(child.children_, node)
-      if (result) return result
+      if (result)
+        return result
     }
     return null
   }
@@ -657,16 +682,16 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
     }
   }
 
-  canvas.addEventListener('mousemove', e => {
+  canvas.addEventListener('mousemove', (e) => {
     updateHover(e)
   })
 
-  canvas.addEventListener('mouseout', e => {
+  canvas.addEventListener('mouseout', (e) => {
     changeHoveredNode(null)
     events.emit('hover', null, e)
   })
 
-  componentEl.addEventListener('click', e => {
+  componentEl.addEventListener('click', (e) => {
     const layout = hitTestNode(e)
     if (layout) {
       const node = layout.node_
@@ -675,14 +700,17 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
         events.emit('click', node, e)
         // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
         updateHover(e)
-      } else if (layout !== currentLayout) {
+      }
+      else if (layout !== currentLayout) {
         changeCurrentNode(layout)
         changeHoveredNode(null)
-         events.emit('click', node, e)
-      } else {
+        events.emit('click', node, e)
+      }
+      else {
         updateHover(e)
       }
-    } else if (currentNode) {
+    }
+    else if (currentNode) {
       changeCurrentNode(null)
       updateHover(e)
     }
@@ -690,7 +718,6 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
 
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
-  
 
   disposables.push(useWheelEventListener(updateHover))
   disposables.push(useResizeEventListener(resize))

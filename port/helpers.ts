@@ -7,7 +7,7 @@ const disabledPathPrefix = /^\(disabled\):/
 
 export const isMac = navigator.platform.includes('Mac')
 
-export function now (): number {
+export function now(): number {
   return (window.performance || Date).now()
 }
 
@@ -27,43 +27,47 @@ export function now (): number {
 //   }
 // }
 
-export function isSourceMapPath (path: string): boolean {
+export function isSourceMapPath(path: string): boolean {
   return isSourceMap.test(path)
 }
 
-export function isDisabledPath (path: string): boolean {
+export function isDisabledPath(path: string): boolean {
   return disabledPathPrefix.test(path)
 }
 
-export function stripDisabledPathPrefix (path: string): string {
+export function stripDisabledPathPrefix(path: string): string {
   return path.replace(disabledPathPrefix, '')
 }
 
-export function formatInteger (value: number): string {
+export function formatInteger(value: number): string {
   return numberFormat ? numberFormat.format(value) : value + ''
 }
 
-export function formatNumberWithDecimal (value: number): string {
+export function formatNumberWithDecimal(value: number): string {
   const parts = value.toFixed(1).split('.', 2)
   return formatInteger(+parts[0]) + '.' + parts[1]
 }
 
-export function bytesToText (bytes: number): string {
-  if (bytes === 1) return '1 byte'
-  if (bytes < 1024) return formatInteger(bytes) + ' bytes'
-  if (bytes < 1024 * 1024) return formatNumberWithDecimal(bytes / 1024) + ' kb'
-  if (bytes < 1024 * 1024 * 1024) return formatNumberWithDecimal(bytes / (1024 * 1024)) + ' mb'
+export function bytesToText(bytes: number): string {
+  if (bytes === 1)
+    return '1 byte'
+  if (bytes < 1024)
+    return formatInteger(bytes) + ' bytes'
+  if (bytes < 1024 * 1024)
+    return formatNumberWithDecimal(bytes / 1024) + ' kb'
+  if (bytes < 1024 * 1024 * 1024)
+    return formatNumberWithDecimal(bytes / (1024 * 1024)) + ' mb'
   return formatNumberWithDecimal(bytes / (1024 * 1024 * 1024)) + ' gb'
 }
 
-export function textToHTML (text: string): string {
+export function textToHTML(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 }
 
-export function hueAngleToColor (hueAngle: number): string {
+export function hueAngleToColor(hueAngle: number): string {
   const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
   const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
   return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
@@ -71,10 +75,7 @@ export function hueAngleToColor (hueAngle: number): string {
 
 const isFirefox = /\bFirefox\//.test(navigator.userAgent)
 
-
-export function strokeRectWithFirefoxBugWorkaround (c: CanvasRenderingContext2D,
-  color: string,
-  x: number, y: number, w: number, h: number): void {
+export function strokeRectWithFirefoxBugWorkaround(c: CanvasRenderingContext2D, color: string, x: number, y: number, w: number, h: number): void {
   // Line drawing in Firefox (at least on macOS) has some really weird bugs:
   //
   //   1. Calling "strokeRect" appears to draw four individual line segments
@@ -104,24 +105,24 @@ export function strokeRectWithFirefoxBugWorkaround (c: CanvasRenderingContext2D,
   c.strokeRect(x, y, w, h)
 }
 
-export function createText (text: string): Text {
+export function createText(text: string): Text {
   return document.createTextNode(text)
 }
 
-export function createCode (text: string): HTMLElement {
+export function createCode(text: string): HTMLElement {
   const code = document.createElement('code')
   code.textContent = text
   return code
 }
 
-export function createSpanWithClass (className: string, text: string): HTMLSpanElement {
+export function createSpanWithClass(className: string, text: string): HTMLSpanElement {
   const span = document.createElement('span')
   span.className = className
   span.textContent = text
   return span
 }
 
-export function shortenDataURLForDisplay (path: string): string {
+export function shortenDataURLForDisplay(path: string): string {
   // Data URLs can be really long. This shortens them to something suitable for
   // display in a tooltip. This shortening behavior is also what esbuild does.
   if (path.startsWith('data:') && path.includes(',')) {
@@ -131,7 +132,7 @@ export function shortenDataURLForDisplay (path: string): string {
   return path
 }
 
-export function splitPathBySlash (path: string): string[] {
+export function splitPathBySlash(path: string): string[] {
   // Treat data URLs (e.g. "data:text/plain;base64,ABCD") as a single path element
   if (path.startsWith('data:') && path.includes(',')) {
     return [path]
@@ -148,10 +149,12 @@ export function splitPathBySlash (path: string): string[] {
   return parts
 }
 
-export function commonPrefixFinder (path: string, commonPrefix: string[] | undefined): string[] {
-  if (path === '') return []
+export function commonPrefixFinder(path: string, commonPrefix: string[] | undefined): string[] {
+  if (path === '')
+    return []
   const parts = splitPathBySlash(path)
-  if (!commonPrefix) return parts
+  if (!commonPrefix)
+    return parts
 
   // Note: This deliberately loops one past the end of the array so it can compare against "undefined"
   for (let i = 0; i <= parts.length; i++) {
@@ -164,9 +167,10 @@ export function commonPrefixFinder (path: string, commonPrefix: string[] | undef
   return commonPrefix
 }
 
-export function commonPostfixFinder (path: string, commonPostfix: string[] | undefined): string[] {
+export function commonPostfixFinder(path: string, commonPostfix: string[] | undefined): string[] {
   const parts = splitPathBySlash(path)
-  if (!commonPostfix) return parts.reverse()
+  if (!commonPostfix)
+    return parts.reverse()
 
   // Note: This deliberately loops one past the end of the array so it can compare against "undefined"
   for (let i = 0; i <= parts.length; i++) {
@@ -179,12 +183,12 @@ export function commonPostfixFinder (path: string, commonPostfix: string[] | und
   return commonPostfix
 }
 
-export function posixDirname (path: string): string {
+export function posixDirname(path: string): string {
   const slash = path.lastIndexOf('/')
   return slash < 0 ? '.' : path.slice(0, slash)
 }
 
-export function posixRelPath (path: string, relToDir: string): string {
+export function posixRelPath(path: string, relToDir: string): string {
   const pathParts = path.split('/')
   const dirParts = relToDir === '.' ? [] : relToDir.split('/')
   let i = 0
@@ -192,20 +196,25 @@ export function posixRelPath (path: string, relToDir: string): string {
     pathParts.shift()
     i++
   }
-  if (i === dirParts.length) pathParts.unshift('.')
-  else while (i < dirParts.length) {
-    pathParts.unshift('..')
-    i++
+  if (i === dirParts.length) {
+    pathParts.unshift('.')
+  }
+  else {
+    while (i < dirParts.length) {
+      pathParts.unshift('..')
+      i++
+    }
   }
   return pathParts.join('/')
 }
 
-export function nodeModulesPackagePathOrNull (path: string): string | null {
+export function nodeModulesPackagePathOrNull(path: string): string | null {
   let parts = splitPathBySlash(path)
   for (let i = parts.length - 1; i >= 0; i--) {
     if (parts[i] === 'node_modules') {
       parts = parts.slice(i + 1)
-      if (parts.length > 1 && /^index\.(?:[jt]sx?)$/.test(parts[parts.length - 1])) parts.pop()
+      if (parts.length > 1 && /^index\.(?:[jt]sx?)$/.test(parts[parts.length - 1]))
+        parts.pop()
       return parts.join('/')
     }
   }
@@ -214,20 +223,19 @@ export function nodeModulesPackagePathOrNull (path: string): string | null {
 
 export let lastInteractionWasKeyboard = false
 
-const darkMode = matchMedia("(prefers-color-scheme: dark)")
-export function useWheelEventListener (listener: ((e: WheelEvent) => void)) {
+const darkMode = matchMedia('(prefers-color-scheme: dark)')
+export function useWheelEventListener(listener: ((e: WheelEvent) => void)) {
   window.addEventListener('wheel', listener, { passive: false })
   return () => window.removeEventListener('wheel', listener)
 }
-export function useResizeEventListener (listener: () => void) {
+export function useResizeEventListener(listener: () => void) {
   window.addEventListener('resize', listener)
   return () => window.removeEventListener('resize', listener)
 }
-export function useDarkModeListener (listener: () => void) {
-  darkMode.addEventListener("change", listener)
-  return () => darkMode.removeEventListener("change", listener)
+export function useDarkModeListener(listener: () => void) {
+  darkMode.addEventListener('change', listener)
+  return () => darkMode.removeEventListener('change', listener)
 }
-
 
 // Only do certain keyboard accessibility stuff if the user is interacting with the keyboard
 document.addEventListener('keydown', () => lastInteractionWasKeyboard = true, { capture: true })
@@ -236,5 +244,6 @@ document.addEventListener('mousedown', () => lastInteractionWasKeyboard = false,
 // Handle the case where this API doesn't exist
 try {
   numberFormat = new Intl.NumberFormat()
-} catch {
+}
+catch {
 }

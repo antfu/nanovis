@@ -15,7 +15,7 @@ enum CONSTANTS {
 const summaryPanel = document.getElementById('summaryPanel') as HTMLDivElement
 const countedFiles = (count: number) => (count === 1 ? 'file' : 'files')
 
-export function showSummary (metafile: Metafile, toggleColor: () => void): void {
+export function showSummary(metafile: Metafile, toggleColor: () => void): void {
   const inputs = metafile.inputs
   const outputs = metafile.outputs
   let fileCountIn = 0
@@ -28,8 +28,12 @@ export function showSummary (metafile: Metafile, toggleColor: () => void): void 
   for (const file in inputs) {
     const input = inputs[file]
     const format = input.format
-    if (format === 'esm') esmByteCountIn += input.bytes
-    else if (format === 'cjs') cjsByteCountIn += input.bytes
+    if (format === 'esm') {
+      esmByteCountIn += input.bytes
+    }
+    else if (format === 'cjs') {
+      cjsByteCountIn += input.bytes
+    }
     else {
       // otherByteCountIn += input.bytes
     }
@@ -78,6 +82,6 @@ export function showSummary (metafile: Metafile, toggleColor: () => void): void 
       : '')
 
   const formatBreakdownEl = summaryPanel.querySelector('.' + styles.formatBreakdown) as HTMLAnchorElement | undefined
-  if (formatBreakdownEl) 
-      formatBreakdownEl.onclick = toggleColor
+  if (formatBreakdownEl)
+    formatBreakdownEl.onclick = toggleColor
 }

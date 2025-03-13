@@ -1,4 +1,4 @@
-import { hasOwnProperty, splitPathBySlash } from "./helpers"
+import { hasOwnProperty, splitPathBySlash } from './helpers'
 
 export interface TreeNodeInProgress {
   name_: string
@@ -7,12 +7,11 @@ export interface TreeNodeInProgress {
   children_: Record<string, TreeNodeInProgress>
 }
 
-export function orderChildrenBySize (a: { inputPath_: string, bytesInOutput_: number },
-  b: { inputPath_: string, bytesInOutput_: number }): number {
+export function orderChildrenBySize(a: { inputPath_: string, bytesInOutput_: number }, b: { inputPath_: string, bytesInOutput_: number }): number {
   return b.bytesInOutput_ - a.bytesInOutput_ || +(a.inputPath_ > b.inputPath_) - +(a.inputPath_ < b.inputPath_)
 }
 
-export function accumulatePath (root: TreeNodeInProgress, path: string, bytesInOutput: number): number {
+export function accumulatePath(root: TreeNodeInProgress, path: string, bytesInOutput: number): number {
   const parts = splitPathBySlash(path)
   const n = parts.length
   let parent = root

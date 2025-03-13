@@ -1,4 +1,4 @@
-import type { Metafile } from './metafile';
+import type { Metafile } from './metafile'
 import {
   bytesToText,
   createCode,
@@ -10,7 +10,7 @@ import {
   posixDirname,
   posixRelPath,
   textToHTML,
-} from './helpers';
+} from './helpers'
 import styles from './whyfile.module.css'
 
 interface ImportRecord {
@@ -35,7 +35,7 @@ let elementToFocusAfterHide: HTMLElement | null = null
 const isIdentifier = /^\w[\w\d]*$/
 
 export const isWhyFileVisible = () => whyFileEl.parentElement !== null
-export function hideWhyFile () {
+export function hideWhyFile() {
   whyFileEl.remove()
   if (elementToFocusAfterHide) {
     elementToFocusAfterHide.focus()
@@ -45,7 +45,7 @@ export function hideWhyFile () {
 
 // This calculates a map from each module to the module that
 // imports it on the closest path toward an entry point module
-export function computeImporters (metafile: Metafile): Info {
+export function computeImporters(metafile: Metafile): Info {
   const inputs = metafile.inputs
   const outputs = metafile.outputs
   const entryPoints: Record<string, string> = {}
@@ -120,10 +120,11 @@ export function computeImporters (metafile: Metafile): Info {
   }
 }
 
-export function showWhyFile (metafile: Metafile, path: string, bytesInOutput: number | null): void {
+export function showWhyFile(metafile: Metafile, path: string, bytesInOutput: number | null): void {
   const input = metafile.inputs[path]
   const activeEl = document.activeElement
-  if (!input) return
+  if (!input)
+    return
 
   if (!cachedInfo || cachedMetafile !== metafile) {
     cachedMetafile = metafile
@@ -143,9 +144,11 @@ export function showWhyFile (metafile: Metafile, path: string, bytesInOutput: nu
     + 'Original size: <b>' + textToHTML(bytesToText(input.bytes)) + '</b>'
     + (bytesInOutput === null ? '' : '<br>Bundled size: <b>' + textToHTML(bytesToText(bytesInOutput)) + '</b>')
     + (input.format === 'esm' ? '<br>Module format: <b>ESM</b>' : input.format === 'cjs' ? '<br>Module format: <b>CommonJS</b>' : '')
-    + (input.with ? '<br>Import attributes: <b>' + textToHTML(Object.entries(input.with).map(([k, v]) => {
-      return (isIdentifier.test(k) ? k : JSON.stringify(k)) + ': ' + JSON.stringify(v)
-    }).join(', ')) + '</b>' : '')
+    + (input.with
+      ? '<br>Import attributes: <b>' + textToHTML(Object.entries(input.with).map(([k, v]) => {
+        return (isIdentifier.test(k) ? k : JSON.stringify(k)) + ': ' + JSON.stringify(v)
+      }).join(', ')) + '</b>'
+      : '')
     + '</p>'
 
   tryToExplainWhyFileIsInBundle(dialogEl, cachedInfo, path)
@@ -163,15 +166,16 @@ export function showWhyFile (metafile: Metafile, path: string, bytesInOutput: nu
   whyFileEl.append(dialogEl)
 
   // Note: Don't use an implicit return here because returning false disables selection
-  whyFileEl.onmousedown = e => {
-    if (e.target === whyFileEl) hideWhyFile()
+  whyFileEl.onmousedown = (e) => {
+    if (e.target === whyFileEl)
+      hideWhyFile()
   }
 
   document.body.append(whyFileEl)
 
   // Capture the escape key to close the dialog
   dialogEl.focus()
-  dialogEl.onkeydown = e => {
+  dialogEl.onkeydown = (e) => {
     if (e.key === 'Escape' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
       hideWhyFile()
@@ -239,7 +243,8 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
 
     const labelEl = createText(label + ' ')
     const targetEl = createText(' is included in the bundle.\n')
-    if (outputFileEl.firstChild) outputFileEl.append('\n')
+    if (outputFileEl.firstChild)
+      outputFileEl.append('\n')
     outputFileEl.append(
       labelEl,
       createCode(item.inputPath_),
@@ -317,7 +322,8 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
         '\n',
       )
       outputFileEl.append(preEl)
-    } else {
+    }
+    else {
       labelEl.textContent = 'So ' + labelEl.textContent!.toLowerCase()
     }
   }
@@ -333,14 +339,16 @@ let appendImportAttributes = (el: HTMLElement, attrs: Record<string, string | Re
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
     const value = attrs[key]
-    if (i > 0) el.append(', ')
+    if (i > 0)
+      el.append(', ')
     el.append(
       isIdentifier.test(key) ? key : createSpanWithClass(styles.string, JSON.stringify(key)),
       ': ',
     )
     if (typeof value === 'string') {
       el.append(createSpanWithClass(styles.string, JSON.stringify(value)))
-    } else {
+    }
+    else {
       appendImportAttributes(el, value)
     }
   }

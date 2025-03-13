@@ -1,7 +1,7 @@
-import type { ColorMapping} from '../color';
+import type { ColorMapping } from '../color'
 import type { Metafile } from '../metafile'
-import type { TreeNodeInProgress } from '../tree';
-import { createNanoEvents } from 'nanoevents';
+import type { TreeNodeInProgress } from '../tree'
+import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
   COLOR,
@@ -28,7 +28,6 @@ export interface Events {
   click: (node: TreeNode, e: MouseEvent) => void
 }
 
-
 enum CONSTANTS {
   ANIMATION_DURATION = 350,
 }
@@ -52,15 +51,16 @@ interface Tree {
   maxDepth_: number
 }
 
-function isParentOf (parent: TreeNode, child: TreeNode | null): boolean {
+function isParentOf(parent: TreeNode, child: TreeNode | null): boolean {
   while (child) {
-    if (child === parent) return true
+    if (child === parent)
+      return true
     child = child.parent_
   }
   return false
 }
 
-function analyzeDirectoryTree (metafile: Metafile): Tree {
+function analyzeDirectoryTree(metafile: Metafile): Tree {
   const inputs = metafile.inputs
   const outputs = metafile.outputs
   const root: TreeNodeInProgress = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
@@ -84,7 +84,8 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
     for (const child of node.sortedChildren_) {
       const childDepth = setParents(child, depth + 1)
       child.parent_ = node
-      if (childDepth > maxDepth) maxDepth = childDepth
+      if (childDepth > maxDepth)
+        maxDepth = childDepth
     }
     return maxDepth + 1
   }
@@ -96,7 +97,8 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
 
   // For each output file
   for (const o in outputs) {
-    if (isSourceMapPath(o)) continue
+    if (isSourceMapPath(o))
+      continue
 
     const output = outputs[o]
     const inputs = output.inputs
@@ -126,8 +128,9 @@ interface Slice {
   sweepAngle_: number
 }
 
-function narrowSlice (root: TreeNode, node: TreeNode, slice: Slice): void {
-  if (root === node) return
+function narrowSlice(root: TreeNode, node: TreeNode, slice: Slice): void {
+  if (root === node)
+    return
 
   const parent = node.parent_!
   const totalBytes = parent.bytesInOutput_ || 1 // Don't divide by 0
@@ -146,7 +149,7 @@ function narrowSlice (root: TreeNode, node: TreeNode, slice: Slice): void {
   slice.depth_ += 1
 }
 
-function computeRadius (depth: number): number {
+function computeRadius(depth: number): number {
   return 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
 }
 
@@ -155,13 +158,13 @@ export interface CreateSunburstOptions {
   colorMode?: COLOR
 }
 
-export function createSunburst (metafile: Metafile, options?: CreateSunburstOptions) {
+export function createSunburst(metafile: Metafile, options?: CreateSunburstOptions) {
   const {
     colorMapping = {},
     colorMode = COLOR.DIRECTORY,
   } = options || {}
-  
-  const events = createNanoEvents<Events>() 
+
+  const events = createNanoEvents<Events>()
   const disposables: (() => void)[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
@@ -169,7 +172,7 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
   let currentNode = tree.root_
   let hoveredNode: TreeNode | null = null
 
-  const changeCurrentNode = (node: TreeNode, e:MouseEvent): void => {
+  const changeCurrentNode = (node: TreeNode, e: MouseEvent): void => {
     if (currentNode !== node) {
       currentNode = node
       updateSunburst()
@@ -212,7 +215,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     // have a tail edge less than 1.5px from the previous tail edge.
     const drawNode = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number => {
       const outerRadius = computeRadius(depth + 1)
-      if (outerRadius > centerY) return prevTailEdge // Don't draw slices that fall outside the canvas bounds
+      if (outerRadius > centerY)
+        return prevTailEdge // Don't draw slices that fall outside the canvas bounds
 
       if (node === hoveredNode) {
         flags |= FLAGS.HOVER
@@ -220,9 +224,11 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
 
       const middleRadius = (innerRadius + outerRadius) / 2
       const tailEdge = startAngle + sweepAngle
-      if (tailEdge - prevTailEdge < 1.5 / middleRadius) return prevTailEdge
+      if (tailEdge - prevTailEdge < 1.5 / middleRadius)
+        return prevTailEdge
       let clampedSweepAngle = 2 / middleRadius
-      if (sweepAngle > clampedSweepAngle) clampedSweepAngle = sweepAngle
+      if (sweepAngle > clampedSweepAngle)
+        clampedSweepAngle = sweepAngle
 
       // Handle the fill
       if (flags & FLAGS.FILL) {
@@ -241,10 +247,12 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
       else {
         const isFullCircle = clampedSweepAngle === Math.PI * 2
         const moveToRadius = flags & FLAGS.CHAIN || isFullCircle ? outerRadius : innerRadius
-        if (flags & FLAGS.ROOT && innerRadius > 0) c.arc(centerX, centerY, innerRadius, startAngle + clampedSweepAngle, startAngle, true)
+        if (flags & FLAGS.ROOT && innerRadius > 0)
+          c.arc(centerX, centerY, innerRadius, startAngle + clampedSweepAngle, startAngle, true)
         c.moveTo(centerX + moveToRadius * Math.cos(startAngle), centerY + moveToRadius * Math.sin(startAngle))
         c.arc(centerX, centerY, outerRadius, startAngle, startAngle + clampedSweepAngle, false)
-        if (!isFullCircle) c.lineTo(centerX + innerRadius * Math.cos(startAngle + clampedSweepAngle), centerY + innerRadius * Math.sin(startAngle + clampedSweepAngle))
+        if (!isFullCircle)
+          c.lineTo(centerX + innerRadius * Math.cos(startAngle + clampedSweepAngle), centerY + innerRadius * Math.sin(startAngle + clampedSweepAngle))
       }
 
       const totalBytes = node.bytesInOutput_
@@ -309,7 +317,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     const hitTestNode = (mouseEvent: MouseEvent): TreeNode | null => {
       const visit = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode | null => {
         const outerRadius = computeRadius(depth + 1)
-        if (outerRadius > centerY) return null // Don't draw slices that fall outside the canvas bounds
+        if (outerRadius > centerY)
+          return null // Don't draw slices that fall outside the canvas bounds
 
         // Hit-test the current node
         if (mouseRadius >= innerRadius && mouseRadius < outerRadius) {
@@ -318,7 +327,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
           deltaAngle -= Math.floor(deltaAngle)
           deltaAngle *= Math.PI * 2
           if (deltaAngle < sweepAngle) {
-            if (node === animatedNode) return node.parent_
+            if (node === animatedNode)
+              return node.parent_
             return node
           }
         }
@@ -329,7 +339,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
         // Hit-test the children
         for (const child of node.sortedChildren_) {
           const hit = visit(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.bytesInOutput_ / totalBytes * sweepAngle)
-          if (hit) return hit
+          if (hit)
+            return hit
           bytesSoFar += child.bytesInOutput_
         }
 
@@ -360,11 +371,13 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
         targetDepth = 0
         targetStartAngle = START_ANGLE
         targetSweepAngle = Math.PI * 2
-      } else {
+      }
+      else {
         // Use a cubic "ease-in-out" curve
         if (t < 0.5) {
           t *= 4 * t * t
-        } else {
+        }
+        else {
           t = 1 - t
           t *= 4 * t * t
           t = 1 - t
@@ -413,7 +426,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
         // showTooltip(e.pageX, e.pageY + 20, tooltip)
         events.emit('hover', node, e)
         canvas.style.cursor = 'pointer'
-      } else {
+      }
+      else {
         events.emit('hover', null, e)
         // hideTooltip()
       }
@@ -425,19 +439,20 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     disposables.push(useResizeEventListener(resize))
     disposables.push(useWheelEventListener(handleMouseMove))
 
-    canvas.onmousemove = e => {
+    canvas.onmousemove = (e) => {
       handleMouseMove(e)
     }
 
     canvas.onmouseout = (e) => {
       changeHoveredNode(null)
-      // hideTooltip() 
+      // hideTooltip()
       events.emit('hover', null, e)
     }
 
-    canvas.onclick = e => {
+    canvas.onclick = (e) => {
       let node = hitTestNode(e)
-      if (!node) return
+      if (!node)
+        return
       // hideTooltip()
       events.emit('click', node, e)
 
@@ -446,15 +461,17 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
       // Handle clicking in the middle node
       if (node !== animatedNode.parent_) {
         stack = historyStack.concat(currentNode)
-      } else if (historyStack.length > 0) {
+      }
+      else if (historyStack.length > 0) {
         node = historyStack.pop()!
         stack = historyStack.slice()
       }
 
       if (node.sortedChildren_.length > 0) {
-        changeCurrentNode(node,e)
+        changeCurrentNode(node, e)
         historyStack = stack
-      } else {
+      }
+      else {
         e.preventDefault() // Prevent the browser from removing the focus on the dialog
         events.emit('click', node, e)
         // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
@@ -473,13 +490,16 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
           // hideTooltip()
           events.emit('hover', null)
         }
-        if (animationFrame === null) animationFrame = requestAnimationFrame(tick)
+        if (animationFrame === null)
+          animationFrame = requestAnimationFrame(tick)
       }
 
-      if (targetNode === currentNode) return
+      if (targetNode === currentNode)
+        return
       historyStack.length = 0
 
-      if (animationFrame === null) animationFrame = requestAnimationFrame(tick)
+      if (animationFrame === null)
+        animationFrame = requestAnimationFrame(tick)
       animationStart = now()
 
       // Animate from parent to child
@@ -536,7 +556,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
 
       for (const child of children) {
         const bytesInOutput = child.bytesInOutput_
-        if (bytesInOutput > maxBytesInOutput) maxBytesInOutput = bytesInOutput
+        if (bytesInOutput > maxBytesInOutput)
+          maxBytesInOutput = bytesInOutput
       }
 
       generatedNodes.length = 0
@@ -604,14 +625,15 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
 
         // Use a link so we get keyboard support
         rowEl.href = 'javascript:void 0'
-        rowEl.onclick = e => {
+        rowEl.onclick = (e) => {
           e.preventDefault() // Prevent meta+click from opening a new tab
           if (child.sortedChildren_.length > 0) {
             changeCurrentNode(child, e)
             if (lastInteractionWasKeyboard && generatedRows.length > 0) {
               generatedRows[0].focus()
             }
-          } else {
+          }
+          else {
             events.emit('click', child, e)
             // showWhyFile(metafile, child.inputPath_, child.bytesInOutput_)
           }
@@ -633,11 +655,12 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
       for (let node: TreeNode | null = currentNode; node; node = node.parent_) {
         let text = node.inputPath_ || '/'
         const nodeEl = document.createElement('a')
-        if (node.parent_) text = text.slice(node.parent_.inputPath_.length)
+        if (node.parent_)
+          text = text.slice(node.parent_.inputPath_.length)
         nodeEl.textContent = text
         if (node !== currentNode) {
           nodeEl.href = 'javascript:void 0'
-          nodeEl.onclick = e => {
+          nodeEl.onclick = (e) => {
             e.preventDefault() // Prevent meta+click from opening a new tab
             changeCurrentNode(node!, e)
             if (lastInteractionWasKeyboard && generatedRows.length > 0) {
@@ -706,7 +729,7 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     redrawSunburst()
     regenerateDetails()
   }
-  
+
   function dispose() {
     disposables.forEach(d => d())
     disposables.length = 0
@@ -717,7 +740,7 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
   return {
     events,
     el: componentEl,
-    draw, 
+    draw,
     dispose,
   }
 }
