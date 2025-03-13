@@ -1,10 +1,10 @@
-import type { Events, Tree, TreeNode } from '../types/tree'
-import type { ColorMapping } from '../utils/color'
+import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
   cssBackgroundForInputPath,
 } from '../utils/color'
+import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
   bytesToText,
   lastInteractionWasKeyboard,
@@ -67,16 +67,24 @@ function computeRadius(depth: number): number {
   return 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
 }
 
-export interface CreateSunburstOptions<T> {
-  colorMapping?: ColorMapping<T>
+export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createSunburst<T>(tree: Tree<T>, options?: CreateSunburstOptions<T>) {
+export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<T> = {}) {
   const {
-    colorMapping = {
-      get: () => undefined,
-    },
-  } = options || {}
+    getColor,
+    // getText,
+    // getSubtext,
+  } = {
+    ...DEFAULT_GRAPH_OPTIONS,
+    ...options,
+  }
+
+  const events = createNanoEvents<Events<T>>()
+  if (options.onClick)
+    events.on('click', options.onClick)
+  if (options.onHover)
+    events.on('hover', options.onHover)
 
   while (tree.root.children.length === 1) {
     tree = {
@@ -84,8 +92,6 @@ export function createSunburst<T>(tree: Tree<T>, options?: CreateSunburstOptions
       maxDepth: tree.maxDepth - 1,
     }
   }
-
-  const events = createNanoEvents<Events<T>>()
   const disposables: (() => void)[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
@@ -152,7 +158,7 @@ export function createSunburst<T>(tree: Tree<T>, options?: CreateSunburstOptions
 
       // Handle the fill
       if (flags & FLAGS.FILL) {
-        c.fillStyle = canvasFillStyleForInputPath(colorMapping.get(node), c, centerX, centerY, 1)
+        c.fillStyle = canvasFillStyleForInputPath(getColor(node), c, centerX, centerY, 1)
         c.beginPath()
         c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
         c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
@@ -504,7 +510,7 @@ export function createSunburst<T>(tree: Tree<T>, options?: CreateSunburstOptions
         rowEl.append(sizeEl)
 
         const barEl = document.createElement('div')
-        const bgColor = cssBackgroundForInputPath(colorMapping.get(child))
+        const bgColor = cssBackgroundForInputPath(getColor(child))
         barEl.className = styles.bar + (child.size ? '' : ' ' + styles.empty)
         barEl.style.background = bgColor
         barEl.style.width = 100 * child.size / maxBytesInOutput + '%'
@@ -628,10 +634,13 @@ export function createSunburst<T>(tree: Tree<T>, options?: CreateSunburstOptions
 
   componentEl.id = styles.sunburstPanel
   componentEl.append(mainEl)
+
   return {
-    events,
     el: componentEl,
+    events,
     draw,
+    resize: draw,
     dispose,
-  }
+    [Symbol.dispose]: dispose,
+  } satisfies GraphBase<T>
 }

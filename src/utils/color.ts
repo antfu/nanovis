@@ -123,16 +123,14 @@ export function cssBackgroundForInputPath(
   return color as string
 }
 
-export function createColorMappingFromPlain<T>(plain: ColorMapPlain): ColorMapping<T> {
-  return {
-    get: (node: TreeNode<T>) => node.id ? plain[node.id] : undefined,
-  }
+export function createColorGetterFromMap<T>(plain: ColorMapPlain): (node: TreeNode<T>) => ColorValue | undefined {
+  return (node: TreeNode<T>) => node.id ? plain[node.id] || node.color : node.color
 }
 
-export function getColorMappingGradient<T>(tree: Tree<T>): ColorMapping<T> {
+export function createColorGetterGradient<T>(tree: Tree<T>): (node: TreeNode<T>) => ColorValue | undefined {
   const colorMapping: ColorMapPlain = {}
   assignColorsByDirectory(colorMapping, tree.root, 0, Math.PI * 2)
-  return createColorMappingFromPlain(colorMapping)
+  return createColorGetterFromMap(colorMapping)
 }
 
 function assignColorsByDirectory<T>(
@@ -181,11 +179,11 @@ export function moduleTypeLabelInputPath(
   return prefix + 'ESM & CJS'
 }
 
-export function getColorMappingFormats<T>(tree: Tree<T>, metafile: Metafile): ColorMapping<T> {
+export function createColorGetterFormats<T>(tree: Tree<T>, metafile: Metafile): (node: TreeNode<T>) => ColorValue | undefined {
   const colorMapping: ColorMapPlain = {}
   assignColorsByFormat(colorMapping, tree.root, metafile)
   // TODO: make it on-demand
-  return createColorMappingFromPlain(colorMapping)
+  return createColorGetterFromMap(colorMapping)
 }
 
 function assignColorsByFormat<T>(colorMapping: ColorMapPlain, node: TreeNode<T>, metafile: Metafile): FORMATS {

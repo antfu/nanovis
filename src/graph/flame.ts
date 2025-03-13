@@ -1,11 +1,10 @@
-import type { Events, Tree, TreeNode } from '../types/tree'
-import type {
-  ColorMapping,
-} from '../utils/color'
+import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
 } from '../utils/color'
+import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
   now,
   strokeRectWithFirefoxBugWorkaround,
@@ -26,18 +25,25 @@ const enum FLAGS {
   HOVER = 2,
 }
 
-export interface CreateFlameOptions<T> {
-  colorMapping?: ColorMapping<T>
+export interface CreateFlameOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createFlame<T>(tree: Tree<T>, options?: CreateFlameOptions<T>) {
+export function createFlame<T>(tree: Tree<T>, options: CreateFlameOptions<T> = {}) {
   const {
-    colorMapping = {
-      get: () => undefined,
-    },
-  } = options || {}
+    getColor,
+    getText,
+    getSubtext,
+  } = {
+    ...DEFAULT_GRAPH_OPTIONS,
+    ...options,
+  }
 
   const events = createNanoEvents<Events<T>>()
+  if (options.onClick)
+    events.on('click', options.onClick)
+  if (options.onHover)
+    events.on('hover', options.onHover)
+
   const disposables: (() => void)[] = []
   const totalBytes = tree.root.size
   let viewportMin = 0
@@ -137,7 +143,7 @@ export function createFlame<T>(tree: Tree<T>, options?: CreateFlameOptions<T>) {
     let measuredW: number
     let typesetX = 0
     const typesetW = w + x - textX
-    const fillColor = canvasFillStyleForInputPath(colorMapping.get(node), c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
+    const fillColor = canvasFillStyleForInputPath(getColor(node), c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
     let textColor = 'black'
     let childRightEdge = -Infinity
 
@@ -161,7 +167,7 @@ export function createFlame<T>(tree: Tree<T>, options?: CreateFlameOptions<T>) {
 
     // Typeset the node name
     if (ellipsisWidth < typesetW) {
-      nameText = node.text
+      nameText = getText(node) || ''
       measuredW = c.measureText(nameText).width
       if (measuredW <= typesetW) {
         typesetX += measuredW
@@ -183,7 +189,9 @@ export function createFlame<T>(tree: Tree<T>, options?: CreateFlameOptions<T>) {
 
     // Typeset the node size
     if (typesetX + ellipsisWidth < typesetW) {
-      sizeText = node.subtext
+      sizeText = getSubtext(node) || ''
+      if (sizeText)
+        sizeText = ' - ' + sizeText
       measuredW = c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
         sizeText = textOverflowEllipsis(sizeText, typesetW - typesetX)
@@ -402,5 +410,6 @@ export function createFlame<T>(tree: Tree<T>, options?: CreateFlameOptions<T>) {
     draw,
     resize,
     dispose,
-  }
+    [Symbol.dispose]: dispose,
+  } satisfies GraphBase<T>
 }
