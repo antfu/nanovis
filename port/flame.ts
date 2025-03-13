@@ -1,8 +1,9 @@
 import indexStyles from './index.module.css'
 import styles from './flame.module.css'
-import { Metafile } from './metafile'
+import type { Metafile } from './metafile'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
-import { accumulatePath, orderChildrenBySize, TreeNodeInProgress } from './tree'
+import type { TreeNodeInProgress } from './tree';
+import { accumulatePath, orderChildrenBySize } from './tree'
 import { colorMode } from './color-mode'
 import {
   canvasFillStyleForInputPath,
@@ -14,7 +15,6 @@ import {
 import {
   bytesToText,
   commonPrefixFinder,
-  isMac,
   isSourceMapPath,
   now,
   setDarkModeListener,
@@ -412,7 +412,7 @@ export let createFlame = (metafile: Metafile): HTMLDivElement => {
 
     if (xForZoom !== null) {
       let mouse = min + (max - min) / zoomedOutWidth * (xForZoom - zoomedOutMin)
-      let scale = Math.pow(1.01, deltaY)
+      let scale = 1.01**deltaY
       min = mouse + (min - mouse) * scale
       max = mouse + (max - mouse) * scale
     } else {
@@ -483,7 +483,7 @@ export let createFlame = (metafile: Metafile): HTMLDivElement => {
     updateHover(e)
   }
 
-  canvas.onmouseout = e => {
+  canvas.onmouseout = () => {
     changeHoveredNode(null)
   }
 

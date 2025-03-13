@@ -1,7 +1,7 @@
 import styles from './index.module.css'
 import './import'
 import './live-reload'
-import { Metafile } from './metafile'
+import type { Metafile } from './metafile'
 import { showSummary } from './summary'
 import { createTreemap } from './treemap'
 import { createSunburst } from './sunburst'
@@ -108,18 +108,4 @@ window.addEventListener('storage', updateTheme)
 
 document.getElementById('loadExample')!.onclick = () => {
   fetch('example-metafile.json').then(r => r.text()).then(finishLoading)
-}
-
-if (location.hash !== '') {
-  // Load from the hash if it's present
-  try {
-    finishLoading(atob(location.hash.slice(1)))
-  } catch (e) {
-  }
-
-  // Clear out the hash afterward
-  try {
-    history.replaceState({}, '', location.pathname)
-  } catch (e) {
-  }
 }

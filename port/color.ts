@@ -1,6 +1,6 @@
-import * as styles from './color.css'
-import { Metafile } from "./metafile"
-import { accumulatePath, orderChildrenBySize, TreeNodeInProgress } from "./tree"
+import type { Metafile } from "./metafile"
+import type { TreeNodeInProgress } from "./tree";
+import { accumulatePath, orderChildrenBySize } from "./tree"
 import {
   hueAngleToColor,
   isSourceMapPath,
@@ -58,7 +58,7 @@ export let canvasFillStyleForInputPath = (
       patternScale -= Math.floor(patternScale)
       t1 = patternScale
       t8 = Math.min(1, 8 * t1)
-      patternScale = Math.pow(2, patternScale)
+      patternScale = 2**patternScale
       lineWidth = 8 * Math.SQRT2 / patternScale
 
       previousPatternContext = c

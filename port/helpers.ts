@@ -5,7 +5,7 @@ let numberFormat: Intl.NumberFormat | undefined
 let isSourceMap = /\.\w+\.map$/
 let disabledPathPrefix = /^\(disabled\):/
 
-export let isMac = navigator.platform.indexOf('Mac') >= 0
+export let isMac = navigator.platform.includes('Mac')
 
 export let now = (): number => {
   return (window.performance || Date).now()
@@ -125,7 +125,7 @@ export let createSpanWithClass = (className: string, text: string): HTMLSpanElem
 export let shortenDataURLForDisplay = (path: string): string => {
   // Data URLs can be really long. This shortens them to something suitable for
   // display in a tooltip. This shortening behavior is also what esbuild does.
-  if (path.startsWith('data:') && path.indexOf(',') >= 0) {
+  if (path.startsWith('data:') && path.includes(',')) {
     path = path.slice(0, 65).replace(/\n/g, '\\n')
     return '<' + (path.length > 64 ? path.slice(0, 64) + '...' : path) + '>'
   }
@@ -134,7 +134,7 @@ export let shortenDataURLForDisplay = (path: string): string => {
 
 export let splitPathBySlash = (path: string): string[] => {
   // Treat data URLs (e.g. "data:text/plain;base64,ABCD") as a single path element
-  if (path.startsWith('data:') && path.indexOf(',') >= 0) {
+  if (path.startsWith('data:') && path.includes(',')) {
     return [path]
   }
 
@@ -234,7 +234,7 @@ window.addEventListener('wheel', e => wheelEventListener && wheelEventListener(e
 window.addEventListener('resize', () => resizeEventListener && resizeEventListener())
 try {
   darkMode.addEventListener("change", darkModeDidChange)
-} catch (o) {
+} catch {
   darkMode.addListener(darkModeDidChange)
 }
 

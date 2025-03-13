@@ -1,8 +1,9 @@
 import indexStyles from './index.module.css'
 import styles from './sunburst.module.css'
-import { Metafile } from './metafile'
+import type { Metafile } from './metafile'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
-import { accumulatePath, orderChildrenBySize, TreeNodeInProgress } from './tree'
+import type { TreeNodeInProgress } from './tree';
+import { accumulatePath, orderChildrenBySize } from './tree'
 import { colorMode } from './color-mode'
 import {
   canvasFillStyleForInputPath,

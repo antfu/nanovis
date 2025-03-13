@@ -1,8 +1,7 @@
-import indexStyles from './index.module.css'
 import styles from './treemap.module.css'
-import { Metafile } from './metafile'
-import { TreeNodeInProgress, accumulatePath, orderChildrenBySize } from './tree'
-import { isWhyFileVisible, showWhyFile } from './whyfile'
+import type { Metafile } from './metafile'
+import type { TreeNodeInProgress} from './tree';
+import { accumulatePath, orderChildrenBySize } from './tree'
 import {
   COLOR,
   canvasFillStyleForInputPath,
@@ -18,11 +17,9 @@ import {
   setDarkModeListener,
   setResizeEventListener,
   setWheelEventListener,
-  shortenDataURLForDisplay,
   splitPathBySlash,
   stripDisabledPathPrefix,
   strokeRectWithFirefoxBugWorkaround,
-  textToHTML,
 } from './helpers'
 import { createNanoEvents } from 'nanoevents'
 

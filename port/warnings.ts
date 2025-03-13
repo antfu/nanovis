@@ -1,5 +1,5 @@
 import styles from './warnings.module.css'
-import { Metafile } from './metafile'
+import type { Metafile } from './metafile'
 import { showWhyFile } from './whyfile'
 import {
   commonPostfixFinder,

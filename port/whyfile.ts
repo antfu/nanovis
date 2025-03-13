@@ -1,5 +1,5 @@
 import styles from './whyfile.module.css'
-import { Metafile } from './metafile';
+import type { Metafile } from './metafile';
 import {
   bytesToText,
   createCode,

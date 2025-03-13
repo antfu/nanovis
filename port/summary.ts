@@ -1,5 +1,5 @@
 import styles from './summary.module.css'
-import { Metafile } from './metafile'
+import type { Metafile } from './metafile'
 import { cjsColor, esmColor } from './color'
 import {
   bytesToText,
@@ -24,7 +24,7 @@ export let showSummary = (metafile: Metafile, toggleColor: () => void): void => 
   let totalBytesOut = 0
   let esmByteCountIn = 0
   let cjsByteCountIn = 0
-  let otherByteCountIn = 0
+  // let otherByteCountIn = 0
   let esmWidth: number
   let cjsWidth: number
   let formatBreakdownEl: HTMLAnchorElement | undefined
@@ -34,7 +34,9 @@ export let showSummary = (metafile: Metafile, toggleColor: () => void): void => 
     let format = input.format
     if (format === 'esm') esmByteCountIn += input.bytes
     else if (format === 'cjs') cjsByteCountIn += input.bytes
-    else otherByteCountIn += input.bytes
+    else {
+      // otherByteCountIn += input.bytes
+    }
     fileCountIn++
     totalBytesIn += input.bytes
   }
