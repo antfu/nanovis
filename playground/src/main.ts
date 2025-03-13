@@ -1,24 +1,26 @@
 /* eslint-disable no-console */
+import type { Metafile } from '../../port/metafile'
+import { COLOR, getColorMapping } from '../../port/color'
 import { createFlame } from '../../port/flame'
 import { createSunburst } from '../../port/sunburst'
-import { createTreemap } from '../../port/treemap'
+import { analyzeDirectoryTree, createTreemap } from '../../port/treemap'
 import data from '../esbuild-github-io-analyze-example-metafile.json'
 import './index.css'
 
-document.body.innerHTML = 'Hello World'
-
-const tree = createTreemap(data as any)
-tree.events.on('click', (node, e) => {
+const metafile = data as Metafile
+const tree = analyzeDirectoryTree(metafile)
+const colorMapping = getColorMapping(metafile, COLOR.DIRECTORY)
+const treemap = createTreemap(tree, { colorMapping })
+treemap.events.on('click', (node, e) => {
   console.log('click', node, e)
 })
-
-tree.events.on('hover', (node, e) => {
+treemap.events.on('hover', (node, e) => {
   console.log('hover', node, e)
 })
-document.body.appendChild(tree.el)
+document.body.appendChild(treemap.el)
 
-const flame = createFlame(data as any)
-document.body.appendChild(flame)
+const flame = createFlame(metafile, { colorMapping })
+document.body.appendChild(flame.el)
 
-const sunburst = createSunburst(data as any)
-document.body.appendChild(sunburst)
+const sunburst = createSunburst(metafile, { colorMapping })
+document.body.appendChild(sunburst.el)

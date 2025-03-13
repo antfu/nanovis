@@ -1,3 +1,5 @@
+import type {
+  ColorMapping} from './color';
 import type { Metafile } from './metafile'
 import type { TreeNodeInProgress} from './tree';
 import { createNanoEvents } from 'nanoevents'
@@ -5,8 +7,6 @@ import {
   canvasFillStyleForInputPath,
   COLOR,
   moduleTypeLabelInputPath,
-  // setAfterColorMappingUpdate,
-  updateColorMapping,
 } from './color'
 import {
   bytesToText,
@@ -23,12 +23,12 @@ import {
 import { accumulatePath, orderChildrenBySize } from './tree'
 import styles from './treemap.module.css'
 
-interface Events {
+export interface Events {
   hover: (node: TreeNode | null, e: MouseEvent) => void
   click: (node: TreeNode, e: MouseEvent) => void
 }
 
-interface TreeNode {
+export interface TreeNode {
   name_: string
   inputPath_: string
   sizeText_: string
@@ -37,7 +37,7 @@ interface TreeNode {
   isOutputFile_: boolean
 }
 
-interface Tree {
+export interface Tree {
   root_: TreeNode
   maxDepth_: number
 }
@@ -62,7 +62,7 @@ enum Culling {
   Culled
 }
 
-function analyzeDirectoryTree(metafile: Metafile): Tree {
+export function analyzeDirectoryTree(metafile: Metafile): Tree {
   const outputs = metafile.outputs
   let totalBytes = 0
   let maxDepth = 0
@@ -254,19 +254,17 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
 }
 
 export interface TreemapOptions {
+  colorMapping?: ColorMapping
   colorMode?: COLOR
 }
 
-export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
+export function createTreemap(tree: Tree, options?: TreemapOptions) {
   const {
+    colorMapping = {},
     colorMode = COLOR.DIRECTORY,
   } = options || {}
 
   const events = createNanoEvents<Events>()
-
-  updateColorMapping(metafile, colorMode)
-
-  const tree = analyzeDirectoryTree(metafile)
   let layoutNodes: NodeLayout[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
@@ -409,7 +407,7 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     }
 
     if (culling !== Culling.Culled && !node.isOutputFile_) {
-      c.fillStyle = canvasFillStyleForInputPath(c, node.inputPath_, bgOriginX, bgOriginY, 1)
+      c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.inputPath_, bgOriginX, bgOriginY, 1)
       if (layout.children_.length) {
         // Avoiding overdraw is probably a good idea...
         c.fillRect(x, y, w, CONSTANTS.HEADER_HEIGHT)
@@ -466,7 +464,7 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
       if (nameText === node.name_ && node.sortedChildren_.length) {
-        const detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, '') : node.sizeText_)
+        const detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.inputPath_, '') : node.sizeText_)
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
         c.globalAlpha = 0.5
@@ -493,7 +491,7 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
       if (h > CONSTANTS.INSET_Y + 16 && !node.sortedChildren_.length) {
-        const detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, '') : node.sizeText_
+        const detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.inputPath_, '') : node.sizeText_
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth)
         c.globalAlpha = 0.5
         c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + CONSTANTS.HEADER_HEIGHT + Math.round(h - CONSTANTS.INSET_Y) / 2)

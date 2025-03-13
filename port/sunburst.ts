@@ -1,3 +1,5 @@
+import type {
+  ColorMapping} from './color';
 import type { Metafile } from './metafile'
 import type { TreeNodeInProgress } from './tree';
 import {
@@ -5,9 +7,8 @@ import {
   COLOR,
   cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
-  setAfterColorMappingUpdate,
+  // setAfterColorMappingUpdate,
 } from './color'
-import { colorMode } from './color-mode'
 import {
   bytesToText,
   isSourceMapPath,
@@ -146,7 +147,17 @@ function computeRadius (depth: number): number {
   return 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
 }
 
-export function createSunburst (metafile: Metafile): HTMLDivElement {
+export interface CreateSunburstOptions {
+  colorMapping?: ColorMapping
+  colorMode?: COLOR
+}
+
+export function createSunburst (metafile: Metafile, options?: CreateSunburstOptions) {
+  const {
+    colorMapping = {},
+    colorMode = COLOR.DIRECTORY,
+  } = options || {}
+  
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
   const tree = analyzeDirectoryTree(metafile)
@@ -209,7 +220,7 @@ export function createSunburst (metafile: Metafile): HTMLDivElement {
 
       // Handle the fill
       if (flags & FLAGS.FILL) {
-        c.fillStyle = canvasFillStyleForInputPath(c, node.inputPath_, centerX, centerY, 1)
+        c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.inputPath_, centerX, centerY, 1)
         c.beginPath()
         c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
         c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
@@ -391,7 +402,7 @@ export function createSunburst (metafile: Metafile): HTMLDivElement {
         } else {
           tooltip = '<b>' + textToHTML(shortenDataURLForDisplay(tooltip)) + '</b>'
         }
-        if (colorMode.value === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
+        if (colorMode === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
         else tooltip += ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
         showTooltip(e.pageX, e.pageY + 20, tooltip)
         canvas.style.cursor = 'pointer'
@@ -443,6 +454,7 @@ export function createSunburst (metafile: Metafile): HTMLDivElement {
     }
 
     leftEl.className = styles.left
+    leftEl.append(canvas)
     tooltipEl.className = indexStyles.tooltip
     mainEl.append(tooltipEl, leftEl)
 
@@ -571,7 +583,7 @@ export function createSunburst (metafile: Metafile): HTMLDivElement {
         rowEl.append(sizeEl)
 
         const barEl = document.createElement('div')
-        const bgColor = cssBackgroundForInputPath(child.inputPath_)
+        const bgColor = cssBackgroundForInputPath(colorMapping, child.inputPath_)
         barEl.className = styles.bar + (child.bytesInOutput_ ? '' : ' ' + styles.empty)
         barEl.style.background = bgColor
         barEl.style.width = 100 * child.bytesInOutput_ / maxBytesInOutput + '%'
@@ -579,7 +591,7 @@ export function createSunburst (metafile: Metafile): HTMLDivElement {
 
         const bytesEl = document.createElement('div')
         bytesEl.className = styles.last
-        bytesEl.textContent = colorMode.value === COLOR.FORMAT ? moduleTypeLabelInputPath(child.inputPath_, '') : size
+        bytesEl.textContent = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, child.inputPath_, '') : size
         barEl.append(bytesEl)
 
         // Use a link so we get keyboard support
@@ -681,12 +693,15 @@ export function createSunburst (metafile: Metafile): HTMLDivElement {
   let [redrawSunburst, updateSunburst] = startSunburst()
   let [regenerateDetails, updateDetails] = startDetails()
 
-  setAfterColorMappingUpdate(() => {
+  const draw = () => {
     redrawSunburst()
     regenerateDetails()
-  })
+  }
 
   componentEl.id = styles.sunburstPanel
   componentEl.append(mainEl)
-  return componentEl
+  return {
+    el: componentEl,
+    draw, 
+  }
 }

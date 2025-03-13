@@ -26,22 +26,17 @@ const patternContext = patternCanvas.getContext('2d')!
 let patternScale = 1
 let pattern: CanvasPattern
 
-let previousMetafile: Metafile | undefined
-let previousColor = COLOR.NONE
-let root: TreeNodeInProgress
-
 export type Color = string | readonly [string, string]
 export type ColorMapping = Record<string, Color>
-let colorMapping: ColorMapping = {}
 
-let afterColorMappingUpdate: (() => void) | null = null
-export const setAfterColorMappingUpdate = (callback: () => void) => afterColorMappingUpdate = callback
-
-export function canvasFillStyleForInputPath (c: CanvasRenderingContext2D,
+export function canvasFillStyleForInputPath (
+  colorMapping: ColorMapping,
+  c: CanvasRenderingContext2D,
   inputPath: string,
   originX: number,
   originY: number,
-  scale: number): string | CanvasPattern {
+  scale: number
+): string | CanvasPattern {
   const color = colorMapping[inputPath] || otherColor
   if (color instanceof Array) {
     const ratio = window.devicePixelRatio || 1
@@ -111,7 +106,10 @@ export function canvasFillStyleForInputPath (c: CanvasRenderingContext2D,
   return color
 }
 
-export function cssBackgroundForInputPath (inputPath: string): string {
+export function cssBackgroundForInputPath (
+  colorMapping: ColorMapping,
+  inputPath: string
+): string {
   const color = colorMapping[inputPath] || otherColor
   if (color instanceof Array) {
     return `url('`
@@ -127,47 +125,40 @@ export function cssBackgroundForInputPath (inputPath: string): string {
   return color
 }
 
-export function updateColorMapping (metafile: Metafile, color: COLOR): void {
-  if (previousMetafile !== metafile) {
-    const outputs = metafile.outputs
-    previousMetafile = metafile
-    previousColor = COLOR.NONE
-    root = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
+export function getColorMapping (metafile: Metafile, color: COLOR): ColorMapping {
+  const colorMapping: ColorMapping = {}
 
-    // For each output file
-    for (const o in outputs) {
-      if (isSourceMapPath(o)) continue
+  const outputs = metafile.outputs
+  const root = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
 
-      const output = outputs[o]
-      const inputs = output.inputs
+  // For each output file
+  for (const o in outputs) {
+    if (isSourceMapPath(o)) continue
 
-      // Accumulate the input files that contributed to this output file
-      for (const i in inputs) {
-        accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
-      }
+    const output = outputs[o]
+    const inputs = output.inputs
+
+    // Accumulate the input files that contributed to this output file
+    for (const i in inputs) {
+      accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
     }
   }
 
-  if (previousColor !== color) {
-    previousColor = color
-    colorMapping = {}
-
-    if (color === COLOR.DIRECTORY) {
-      assignColorsByDirectory(colorMapping, root, 0, Math.PI * 2)
-    } else if (color === COLOR.FORMAT) {
-      assignColorsByFormat(colorMapping, root)
-    }
-
-    if (afterColorMappingUpdate) afterColorMappingUpdate()
+  if (color === COLOR.DIRECTORY) {
+    assignColorsByDirectory(colorMapping, root, 0, Math.PI * 2)
+  } else if (color === COLOR.FORMAT) {
+    assignColorsByFormat(colorMapping, root, metafile)
   }
+
+  return colorMapping
 }
 
-let assignColorsByDirectory = (
+function assignColorsByDirectory (
   colorMapping: ColorMapping,
   node: TreeNodeInProgress,
   startAngle: number,
-  sweepAngle: number,
-): void => {
+  sweepAngle: number
+): void {
   const totalBytes = node.bytesInOutput_
   const children = node.children_
   const sorted: TreeNodeInProgress[] = []
@@ -197,7 +188,11 @@ function colorForFormats (formats: FORMATS): Color {
   return bothColor
 }
 
-export function moduleTypeLabelInputPath (inputPath: string, prefix: string): string {
+export function moduleTypeLabelInputPath (
+  colorMapping: ColorMapping,
+  inputPath: string, 
+  prefix: string
+): string {
   const color = colorMapping[inputPath] || otherColor
   if (color === otherColor) return ''
   if (color === esmColor) return prefix + 'ESM'
@@ -205,18 +200,18 @@ export function moduleTypeLabelInputPath (inputPath: string, prefix: string): st
   return prefix + 'ESM & CJS'
 }
 
-let assignColorsByFormat = (colorMapping: ColorMapping, node: TreeNodeInProgress): FORMATS => {
+function assignColorsByFormat (colorMapping: ColorMapping, node: TreeNodeInProgress, metafile: Metafile): FORMATS {
   const children = node.children_
   let formats: FORMATS | 0 = 0
   let hasChild = false
 
   for (const file in children) {
-    formats |= assignColorsByFormat(colorMapping, children[file])
+    formats |= assignColorsByFormat(colorMapping, children[file], metafile)
     hasChild = true
   }
 
   if (!hasChild) {
-    const input = previousMetafile!.inputs[node.inputPath_]
+    const input = metafile.inputs[node.inputPath_]
     const format = input && input.format
     formats = format === 'esm' ? FORMATS.ESM : format === 'cjs' ? FORMATS.CJS : 0
   }

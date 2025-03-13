@@ -1,3 +1,5 @@
+import type {
+  ColorMapping} from './color';
 import type { Metafile } from './metafile'
 import type { TreeNodeInProgress } from './tree';
 import {
@@ -5,9 +7,7 @@ import {
   COLOR,
   moduleTypeLabelInputPath,
   otherColor,
-  setAfterColorMappingUpdate,
 } from './color'
-import { colorMode } from './color-mode'
 import styles from './flame.module.css'
 import {
   bytesToText,
@@ -161,7 +161,17 @@ function analyzeDirectoryTree (metafile: Metafile): Tree {
   }
 }
 
-export function createFlame (metafile: Metafile): HTMLDivElement {
+export interface CreateFlameOptions {    
+  colorMapping?: ColorMapping
+  colorMode?: COLOR
+}
+
+export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
+  const {
+    colorMapping = {},
+    colorMode = COLOR.DIRECTORY,
+  } = options || {}
+
   const tree = analyzeDirectoryTree(metafile)
   const totalBytes = tree.root_.bytesInOutput_
   let viewportMin = 0
@@ -255,7 +265,7 @@ export function createFlame (metafile: Metafile): HTMLDivElement {
     let typesetX = 0
     const typesetW = w + x - textX
     const fillColor = node.inputPath_
-      ? canvasFillStyleForInputPath(c, node.inputPath_,
+      ? canvasFillStyleForInputPath(colorMapping, c, node.inputPath_,
         zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
       : otherColor
     let textColor = 'black'
@@ -301,7 +311,7 @@ export function createFlame (metafile: Metafile): HTMLDivElement {
 
     // Typeset the node size
     if (typesetX + ellipsisWidth < typesetW) {
-      sizeText = colorMode.value === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, ' – ') : node.sizeText_
+      sizeText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – ') : node.sizeText_
       measuredW = c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
         sizeText = textOverflowEllipsis(sizeText, typesetW - typesetX)
@@ -443,8 +453,8 @@ export function createFlame (metafile: Metafile): HTMLDivElement {
       let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
       const nameSplit = tooltip.length - node.name_.length
       tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      tooltip += colorMode.value === COLOR.FORMAT
-        ? textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
+      tooltip += colorMode === COLOR.FORMAT
+        ? textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
         : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
       showTooltip(e.pageX, e.pageY + 20, tooltip)
     } else {
@@ -526,7 +536,7 @@ export function createFlame (metafile: Metafile): HTMLDivElement {
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
   setDarkModeListener(draw)
-  setAfterColorMappingUpdate(draw)
+  // setAfterColorMappingUpdate(draw)
   setResizeEventListener(resize)
 
   componentEl.id = styles.flamePanel
@@ -534,5 +544,9 @@ export function createFlame (metafile: Metafile): HTMLDivElement {
   mainEl.append(canvas)
   componentEl.append(mainEl, tooltipEl)
 
-  return componentEl
+  return {
+    el: componentEl,
+    draw,
+    resize
+  }
 }
