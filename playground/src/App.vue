@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import type { TreeNode } from '../../src'
-import type { Metafile } from '../../src/esbuild/metafile'
+import type { TreeNode } from 'nanovis'
+import type { Metafile } from 'nanovis/esbuild'
 import { useMouse } from '@vueuse/core'
+import { createColorGetterGradient, createFlamegraph, createSunburst, createTreemap } from 'nanovis'
+import { esbuildMetafileToTree } from 'nanovis/esbuild'
 import { onMounted, onUnmounted, reactive, shallowRef, useTemplateRef } from 'vue'
-import { createFlame, createSunburst, createTreemap } from '../../src'
-import { esbuildMetafileToTree } from '../../src/esbuild/metafile-to-tree'
-import { createColorGetterGradient } from '../../src/utils/color'
 import data from '../data/esbuild-analyze-example-metafile.json'
 
 const mouse = reactive(useMouse())
@@ -26,14 +25,14 @@ const el = useTemplateRef('el')
 onMounted(() => {
   const treemap = createTreemap(tree, { getColor, onClick, onHover })
   el.value!.appendChild(treemap.el)
-  const flame = createFlame(tree, { getColor, onClick, onHover })
-  el.value!.appendChild(flame.el)
+  const flamegraph = createFlamegraph(tree, { getColor, onClick, onHover })
+  el.value!.appendChild(flamegraph.el)
   const sunburst = createSunburst(tree, { getColor, onClick, onHover })
   el.value!.appendChild(sunburst.el)
 
   onUnmounted(() => {
     treemap.dispose()
-    flame.dispose()
+    flamegraph.dispose()
     sunburst.dispose()
   })
 })

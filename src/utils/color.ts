@@ -1,11 +1,7 @@
-import type { Metafile } from '../esbuild/metafile'
+import type { ColorMapPlain, ColorValue } from '../types/color'
 import type { Tree, TreeNode } from '../types/tree'
 
-export type ColorValue = string | readonly [string, string]
-export type ColorMapPlain = Record<string, ColorValue>
-export interface ColorMapping<T> {
-  get: (node: TreeNode<T>) => ColorValue | undefined
-}
+export const COLOR_FALLBACK = '#CCC'
 
 export function hueAngleToColor(hueAngle: number): string {
   const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
@@ -13,20 +9,15 @@ export function hueAngleToColor(hueAngle: number): string {
   return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
 }
 
-enum FORMATS {
-  CJS = 1,
-  ESM = 2,
-}
-
 let previousPatternContext: CanvasRenderingContext2D | undefined
 let previousPatternRatio: number | undefined
 let previousPatternScale: number | undefined
-const patternCanvas = document.createElement('canvas')
-const patternContext = patternCanvas.getContext('2d')!
+let patternCanvas: HTMLCanvasElement | undefined
+let patternContext: CanvasRenderingContext2D | undefined
 let patternScale = 1
 let pattern: CanvasPattern
 
-export function canvasFillStyleForInputPath(
+export function colorToCanvasFill(
   color: ColorValue | undefined,
   c: CanvasRenderingContext2D,
   originX: number,
@@ -52,6 +43,9 @@ export function canvasFillStyleForInputPath(
     previousPatternContext = c
     previousPatternRatio = ratio
     previousPatternScale = scale
+
+    patternCanvas ||= document.createElement('canvas')
+    patternContext ||= patternCanvas.getContext('2d')!
 
     patternCanvas.width = patternCanvas.height = Math.round(64 * s)
     patternContext.scale(s, s)
@@ -105,7 +99,7 @@ export function canvasFillStyleForInputPath(
   return pattern
 }
 
-export function cssBackgroundForInputPath(
+export function colorToCssBackground(
   color: ColorValue | undefined,
 ): string {
   color ||= COLOR_FALLBACK
@@ -147,60 +141,4 @@ function assignColorsByDirectory<T>(
     assignColorsByDirectory(colorMapping, child, startAngle, childSweepAngle)
     startAngle += childSweepAngle
   }
-}
-
-export const COLOR_FALLBACK = '#CCC'
-
-const COLOR_CJS = hueAngleToColor(3.5)
-const COLOR_ESM = hueAngleToColor(1)
-const COLOR_BOTH = [COLOR_CJS, COLOR_ESM] as const
-
-function colorForFormats(formats: FORMATS): ColorValue {
-  if (!formats)
-    return COLOR_FALLBACK
-  if (formats === FORMATS.CJS)
-    return COLOR_CJS
-  if (formats === FORMATS.ESM)
-    return COLOR_ESM
-  return COLOR_BOTH
-}
-
-export function moduleTypeLabelInputPath(
-  color: ColorValue | undefined,
-  prefix: string,
-): string {
-  color ||= COLOR_FALLBACK
-  if (color === COLOR_FALLBACK)
-    return ''
-  if (color === COLOR_ESM)
-    return prefix + 'ESM'
-  if (color === COLOR_CJS)
-    return prefix + 'CJS'
-  return prefix + 'ESM & CJS'
-}
-
-export function createColorGetterFormats<T>(tree: Tree<T>, metafile: Metafile): (node: TreeNode<T>) => ColorValue | undefined {
-  const colorMapping: ColorMapPlain = {}
-  assignColorsByFormat(colorMapping, tree.root, metafile)
-  // TODO: make it on-demand
-  return createColorGetterFromMap(colorMapping)
-}
-
-function assignColorsByFormat<T>(colorMapping: ColorMapPlain, node: TreeNode<T>, metafile: Metafile): FORMATS {
-  let formats: FORMATS | 0 = 0
-  let hasChild = false
-
-  for (const child of node.children) {
-    formats |= assignColorsByFormat(colorMapping, child, metafile)
-    hasChild = true
-  }
-
-  if (!hasChild) {
-    const input = metafile.inputs[node.id]
-    const format = input && input.format
-    formats = format === 'esm' ? FORMATS.ESM : format === 'cjs' ? FORMATS.CJS : 0
-  }
-
-  colorMapping[node.id] = colorForFormats(formats)
-  return formats
 }

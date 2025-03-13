@@ -4,16 +4,17 @@
     "lib": ["ESNext", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "nanovis": ["./src/index.ts"],
+      "nanovis/esbuild": ["./src/esbuild.ts"]
+    },
     "resolveJsonModule": true,
     "strict": true,
     "strictNullChecks": true,
     "noEmit": true,
     "esModuleInterop": true,
-    // "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true
-  },
-  "exclude": [
-    "./port"
-  ]
+  }
 }

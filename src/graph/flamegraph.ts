@@ -1,8 +1,7 @@
 import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
-
 import { createNanoEvents } from 'nanoevents'
 import {
-  canvasFillStyleForInputPath,
+  colorToCanvasFill,
 } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
@@ -25,10 +24,10 @@ const enum FLAGS {
   HOVER = 2,
 }
 
-export interface CreateFlameOptions<T> extends GraphBaseOptions<T> {
+export interface CreateFlamegraphOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createFlame<T>(tree: Tree<T>, options: CreateFlameOptions<T> = {}) {
+export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOptions<T> = {}) {
   const {
     getColor,
     getText,
@@ -153,7 +152,7 @@ export function createFlame<T>(tree: Tree<T>, options: CreateFlameOptions<T> = {
     let measuredW: number
     let typesetX = 0
     const typesetW = w + x - textX
-    const fillColor = canvasFillStyleForInputPath(getColor(node), c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
+    const fillColor = colorToCanvasFill(getColor(node), c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
     let textColor = 'black'
     let childRightEdge = -Infinity
 

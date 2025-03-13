@@ -1,6 +1,6 @@
 import type { Tree, TreeNode } from '../types/tree'
 import type { Metafile } from './metafile'
-import { bytesToText, hasOwnProperty } from '../utils/helpers'
+import { bytesToText } from '../utils/helpers'
 import { commonPrefixFinder, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from './helpers'
 
 export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
@@ -154,7 +154,7 @@ export function accumulatePath(root: TreeNodeInProgress, path: string, bytesInOu
     const name = part + (i + 1 < n ? '/' : '')
     inputPath += name
 
-    if (!hasOwnProperty.call(children, part)) {
+    if (!Object.prototype.hasOwnProperty.call(children, part)) {
       child = {
         text: name,
         id: inputPath,

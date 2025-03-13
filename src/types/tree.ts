@@ -1,5 +1,5 @@
 import type { Emitter } from 'nanoevents'
-import type { ColorValue } from '../utils/color'
+import type { ColorValue } from './color'
 
 export interface TreeNode<T> {
   id: string

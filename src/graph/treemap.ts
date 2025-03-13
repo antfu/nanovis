@@ -2,7 +2,7 @@
 import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import { createNanoEvents } from 'nanoevents'
 import {
-  canvasFillStyleForInputPath,
+  colorToCanvasFill,
 } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
@@ -281,7 +281,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     }
 
     if (culling !== Culling.Culled && !node.isOutput) {
-      c.fillStyle = canvasFillStyleForInputPath(getColor(node), c, bgOriginX, bgOriginY, 1)
+      c.fillStyle = colorToCanvasFill(getColor(node), c, bgOriginX, bgOriginY, 1)
       if (layout.children.length) {
         // Avoiding overdraw is probably a good idea...
         c.fillRect(x, y, w, CONSTANT_HEADER_HEIGHT)

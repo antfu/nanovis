@@ -2,9 +2,6 @@ const isFirefox = /\bFirefox\//.test(navigator.userAgent)
 
 let numberFormat: Intl.NumberFormat | undefined
 
-export const hasOwnProperty = Object.prototype.hasOwnProperty
-export const indexOf = Array.prototype.indexOf
-
 export function formatInteger(value: number): string {
   return numberFormat ? numberFormat.format(value) : value + ''
 }
@@ -16,23 +13,6 @@ export function now(): number {
 export function formatNumberWithDecimal(value: number): string {
   const parts = value.toFixed(1).split('.', 2)
   return formatInteger(+parts[0]) + '.' + parts[1]
-}
-
-export function shortenDataURLForDisplay(path: string): string {
-  // Data URLs can be really long. This shortens them to something suitable for
-  // display in a tooltip. This shortening behavior is also what esbuild does.
-  if (path.startsWith('data:') && path.includes(',')) {
-    path = path.slice(0, 65).replace(/\n/g, '\\n')
-    return '<' + (path.length > 64 ? path.slice(0, 64) + '...' : path) + '>'
-  }
-  return path
-}
-
-export function textToHTML(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
 }
 
 export function bytesToText(bytes: number): string {
@@ -77,26 +57,7 @@ export function strokeRectWithFirefoxBugWorkaround(c: CanvasRenderingContext2D, 
   c.strokeRect(x, y, w, h)
 }
 
-export function createText(text: string): Text {
-  return document.createTextNode(text)
-}
-
-export function createCode(text: string): HTMLElement {
-  const code = document.createElement('code')
-  code.textContent = text
-  return code
-}
-
-export function createSpanWithClass(className: string, text: string): HTMLSpanElement {
-  const span = document.createElement('span')
-  span.className = className
-  span.textContent = text
-  return span
-}
-
-export let lastInteractionWasKeyboard = false
-
-const darkMode = matchMedia('(prefers-color-scheme: dark)')
+let darkMode: MediaQueryList | undefined
 export function useWheelEventListener(listener: ((e: WheelEvent) => void)) {
   window.addEventListener('wheel', listener, { passive: false })
   return () => window.removeEventListener('wheel', listener)
@@ -106,13 +67,10 @@ export function useResizeEventListener(listener: () => void) {
   return () => window.removeEventListener('resize', listener)
 }
 export function useDarkModeListener(listener: () => void) {
+  darkMode ||= matchMedia('(prefers-color-scheme: dark)')
   darkMode.addEventListener('change', listener)
-  return () => darkMode.removeEventListener('change', listener)
+  return () => darkMode!.removeEventListener('change', listener)
 }
-
-// Only do certain keyboard accessibility stuff if the user is interacting with the keyboard
-document.addEventListener('keydown', () => lastInteractionWasKeyboard = true, { capture: true })
-document.addEventListener('mousedown', () => lastInteractionWasKeyboard = false, { capture: true })
 
 // Handle the case where this API doesn't exist
 try {

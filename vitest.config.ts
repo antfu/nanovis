@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import { alias } from './alias'
 
 export default defineConfig({
   test: {
@@ -7,5 +8,8 @@ export default defineConfig({
         inline: ['vitest-package-exports'],
       },
     },
+  },
+  resolve: {
+    alias,
   },
 })

@@ -1,7 +1,7 @@
 import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import { createNanoEvents } from 'nanoevents'
 import {
-  canvasFillStyleForInputPath,
+  colorToCanvasFill,
 } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
@@ -148,7 +148,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
 
     // Handle the fill
     if (flags & FLAGS.FILL) {
-      c.fillStyle = canvasFillStyleForInputPath(getColor(node), c, centerX, centerY, 1)
+      c.fillStyle = colorToCanvasFill(getColor(node), c, centerX, centerY, 1)
       c.beginPath()
       c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
       c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)

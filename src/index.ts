@@ -1,5 +1,5 @@
-export * from './graph/flame'
+export * from './graph/flamegraph'
 export * from './graph/sunburst'
 export * from './graph/treemap'
-export * from './types/tree'
+export * from './types'
 export * from './utils/color'
