@@ -10,6 +10,7 @@ export interface Palette {
   fallback: string
   stroke: string
   hover: string
+  shadow: string
   text: string
   fg: string
   bg: string

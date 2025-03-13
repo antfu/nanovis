@@ -141,8 +141,10 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   let bgOriginX = 0
   let bgOriginY = 0
   let bgColor = ''
-  const normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
-  const boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
+  const normalFont = '14px sans-serif'
+  // const boldWidthCache: Record<number, number> = {}
+  // const boldFont = 'bold ' + normalFont
+  const normalWidthCache: Record<number, number> = {}
   let ellipsisWidth = 0
   let currentWidthCache: Record<number, number> = normalWidthCache
   let currentNode: NodeLayout<T> | null = null
@@ -271,7 +273,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
       flags |= drawNodeBackground(child, culling)
     }
 
-    if (culling !== Culling.Culled && !node.isOutput) {
+    if (culling !== Culling.Culled) {
       c.fillStyle = colorToCanvasFill(getColor(node) || palette.fallback, c, bgOriginX, bgOriginY, 1)
       if (layout.children.length) {
         // Avoiding overdraw is probably a good idea...
@@ -292,41 +294,27 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   const drawNodeForeground = (layout: NodeLayout<T>, inCurrentNode: boolean): void => {
     const node = layout.node
     const [x, y, w, h] = layout.box
-    const isOutputFile = node.isOutput
 
     // Draw the hover highlight
-    if (hoveredNode === node && !isOutputFile && (!currentNode || inCurrentNode)) {
+    if (hoveredNode === node && (!currentNode || inCurrentNode)) {
       c.fillStyle = palette.hover
       c.fillRect(x, y, w, h)
     }
 
-    if (!isOutputFile) {
-      // Note: The stroke deliberately overlaps the right and bottom edges
-      strokeRectWithFirefoxBugWorkaround(c, palette.stroke, x + 0.5, y + 0.5, w, h)
-    }
+    strokeRectWithFirefoxBugWorkaround(c, palette.stroke, x + 0.5, y + 0.5, w, h)
 
     if (h >= CONSTANT_HEADER_HEIGHT) {
-      c.fillStyle = isOutputFile ? palette.fg : palette.text
+      c.fillStyle = palette.text
 
-      // Switch to the bold font
-      if (isOutputFile) {
-        c.font = boldFont
-        currentWidthCache = boldWidthCache
-        ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
-      }
+      c.font = normalFont
+      currentWidthCache = normalWidthCache
+      ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
 
       // Measure the node name
       const maxWidth = w - CONSTANT_INSET_X
       const textY = y + Math.round(CONSTANT_INSET_Y / 2)
       const [nameText, nameWidth] = textOverflowEllipsis(getText(node) || '', maxWidth)
       let textX = x + Math.round((w - nameWidth) / 2)
-
-      // Switch to the normal font
-      if (isOutputFile) {
-        c.font = normalFont
-        currentWidthCache = normalWidthCache
-        ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
-      }
 
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
       if (nameText === getText(node) && node.children.length) {
@@ -340,22 +328,8 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
         c.globalAlpha = 1
       }
 
-      // Switch to the bold font
-      if (isOutputFile) {
-        c.font = boldFont
-        currentWidthCache = boldWidthCache
-        ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
-      }
-
       // Draw the node name
       c.fillText(nameText, textX, textY)
-
-      // Switch to the normal font
-      if (isOutputFile) {
-        c.font = normalFont
-        currentWidthCache = normalWidthCache
-        ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
-      }
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
       if (h > CONSTANT_INSET_Y + 16 && !node.children.length) {
@@ -381,7 +355,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     ellipsisWidth = c.measureText('...').width
 
     // Draw the full tree first
-    let nodeContainingHover: NodeLayout<T> | null = null
+    let _nodeContainingHover: NodeLayout<T> | null = null
     let nodeContainingTarget: NodeLayout<T> | null = null
     const transition = !currentLayout
       ? 0
@@ -392,15 +366,15 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     for (const node of layoutNodes) {
       const flags = drawNodeBackground(node, Culling.Enabled)
       if (flags & DrawFlags.CONTAINS_HOVER)
-        nodeContainingHover = node
+        _nodeContainingHover = node
       if (flags & DrawFlags.CONTAINS_TARGET)
         nodeContainingTarget = node
     }
     for (const node of layoutNodes) {
       drawNodeForeground(node, false)
 
-      // Fade out nodes that aren't being hovered
-      if (currentLayout || (nodeContainingHover && node !== nodeContainingHover)) {
+      // Fade out nodes that are not activated
+      if (currentLayout) {
         const [x, y, w, h] = node.box
         c.globalAlpha = 0.6 * (!currentLayout || (!animationSource
           && nodeContainingTarget && node !== nodeContainingTarget)
@@ -420,7 +394,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
 
       // Draw a shadow under the node
       c.save()
-      c.shadowColor = 'rgba(0,0,0,0.5)'
+      c.shadowColor = palette.shadow
       c.shadowBlur = scale * (30 * transition)
       c.shadowOffsetX = scale * (2 * width)
       c.shadowOffsetY = scale * (2 * height + 15 * transition)

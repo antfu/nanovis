@@ -10,6 +10,7 @@ export const DEFAULT_PALETTE: Palette = {
   stroke: '#0008',
   text: '#222',
   hover: '#fff5',
+  shadow: '#0008',
   fg: '#fff',
   bg: '#222',
 }

@@ -2,7 +2,7 @@
 import type { TreeNode } from 'nanovis'
 import type { Metafile } from 'nanovis/esbuild'
 import { useMouse } from '@vueuse/core'
-import { createColorGetterGradient, createFlamegraph, createSunburst, createTreemap } from 'nanovis'
+import { createColorGetterSpectrum, createFlamegraph, createSunburst, createTreemap } from 'nanovis'
 import { esbuildMetafileToTree } from 'nanovis/esbuild'
 import { onMounted, onUnmounted, reactive, shallowRef, useTemplateRef } from 'vue'
 import data from '../data/esbuild-analyze-example-metafile.json'
@@ -12,7 +12,8 @@ const selected = shallowRef<TreeNode<any> | null>(null)
 
 const metafile = data as Metafile
 const tree = esbuildMetafileToTree(metafile)
-const getColor = createColorGetterGradient(tree)
+// tree.root.children.push(...structuredClone(tree.root.children))
+const getColor = createColorGetterSpectrum(tree)
 
 function onClick(_node: TreeNode<any>) {
   selected.value = null
@@ -33,7 +34,7 @@ const options = {
 const el = useTemplateRef('el')
 
 onMounted(() => {
-  const treemap = createTreemap(tree, { ...options, getColor: createColorGetterGradient(tree, 0.6) })
+  const treemap = createTreemap(tree, { ...options, getColor: createColorGetterSpectrum(tree, 0.6) })
   el.value!.appendChild(treemap.el)
   const flamegraph = createFlamegraph(tree, options)
   el.value!.appendChild(flamegraph.el)

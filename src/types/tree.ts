@@ -4,12 +4,11 @@ import type { ColorValue, Palette } from './color'
 export interface TreeNode<T> {
   id: string
   text: string
-  size: number
   subtext?: string
+  size: number
   color?: ColorValue
   children: TreeNode<T>[]
-  parent: TreeNode<T> | null
-  isOutput: boolean
+  parent?: TreeNode<T>
   meta?: T
 }
 

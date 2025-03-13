@@ -9,11 +9,11 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
   let commonPrefix: string[] | undefined
   const root: TreeNodeInProgress = { text: '', id: '', size: 0, childrenMap: {} }
 
-  const sortChildren = (node: TreeNodeInProgress, isOutputFile: boolean): TreeNode<T> => {
+  const sortChildren = (node: TreeNodeInProgress): TreeNode<T> => {
     const children = node.childrenMap
     const sorted: TreeNode<T>[] = []
     for (const file in children) {
-      sorted.push(sortChildren(children[file], false))
+      sorted.push(sortChildren(children[file]))
     }
     return {
       text: node.text,
@@ -21,8 +21,6 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
       subtext: bytesToText(node.size),
       size: node.size,
       children: sorted.sort(orderChildrenBySize),
-      isOutput: isOutputFile,
-      parent: null,
     }
   }
 
@@ -65,7 +63,7 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
     }
 
     node.size = bytes
-    nodes.push(sortChildren(node, true))
+    nodes.push(sortChildren(node))
   }
 
   // Unwrap common nested directories
@@ -111,7 +109,6 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
         subtext: bytesToText(node.size - childBytes),
         size: node.size - childBytes,
         children: [],
-        isOutput: false,
         parent: node,
       })
     }
@@ -119,7 +116,7 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
 
   nodes.sort(orderChildrenBySize)
 
-  const finalRoot = sortChildren(root, false)
+  const finalRoot = sortChildren(root)
   return {
     root: finalRoot,
     maxDepth: setParents(finalRoot, 0),

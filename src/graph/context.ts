@@ -1,6 +1,6 @@
 import type { Events, GraphBaseOptions, Tree } from '../types'
 import { createNanoEvents } from 'nanoevents'
-import { createColorGetterGradient } from '../utils/color'
+import { createColorGetterSpectrum } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS, DEFAULT_PALETTE } from '../utils/defaults'
 
 export function createGraphContext<T>(
@@ -12,7 +12,7 @@ export function createGraphContext<T>(
     ...options,
   }
   const {
-    getColor = createColorGetterGradient(tree),
+    getColor = createColorGetterSpectrum(tree),
     getText,
     getSubtext,
   } = merged

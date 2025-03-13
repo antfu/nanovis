@@ -117,7 +117,7 @@ export function createColorGetterFromMap<T>(plain: ColorMapPlain): (node: TreeNo
   return (node: TreeNode<T>) => node.id ? plain[node.id] || node.color : node.color
 }
 
-export function createColorGetterGradient<T>(
+export function createColorGetterSpectrum<T>(
   tree: Tree<T>,
   saturationMultiplier = 1,
   lightnessMultiplier = 1,

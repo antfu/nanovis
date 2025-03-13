@@ -18,7 +18,7 @@ const enum FLAGS {
   HOVER = 8,
 }
 
-function isParentOf(parent: TreeNode<any>, child: TreeNode<any> | null): boolean {
+function isParentOf(parent: TreeNode<any>, child: TreeNode<any> | undefined): boolean {
   while (child) {
     if (child === parent)
       return true
@@ -79,7 +79,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   }
 
   let currentNode = tree.root
-  let hoveredNode: TreeNode<T> | null = null
+  let hoveredNode: TreeNode<T> | undefined
 
   const changeCurrentNode = (node: TreeNode<T>, e: MouseEvent): void => {
     if (currentNode !== node) {
@@ -89,7 +89,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     }
   }
 
-  const changeHoveredNode = (node: TreeNode<T> | null): void => {
+  const changeHoveredNode = (node: TreeNode<T> | undefined): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
       updateSunburst()
@@ -219,11 +219,11 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   let animatedStartAngle = sourceStartAngle
   let animatedSweepAngle = sourceSweepAngle
 
-  function hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | null {
-    function visit(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | null {
+  function hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
+    function visit(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | undefined {
       const outerRadius = computeRadius(depth + 1)
       if (outerRadius > centerY)
-        return null // Don't draw slices that fall outside the canvas bounds
+        return undefined // Don't draw slices that fall outside the canvas bounds
 
       // Hit-test the current node
       if (mouseRadius >= innerRadius && mouseRadius < outerRadius) {
@@ -249,7 +249,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
         bytesSoFar += child.size
       }
 
-      return null
+      return undefined
     }
 
     let x = mouseEvent.pageX
@@ -297,7 +297,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     draw()
   }
 
-  let previousHoveredNode: TreeNode<T> | null = null
+  let previousHoveredNode: TreeNode<T> | undefined
   let historyStack: TreeNode<T>[] = []
   function handleMouseMove(e: MouseEvent): void {
     const node = hitTestNode(e)
@@ -322,7 +322,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   }
 
   canvas.onmouseout = (e) => {
-    changeHoveredNode(null)
+    changeHoveredNode(undefined)
     events.emit('hover', null, e)
   }
 
