@@ -140,7 +140,6 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   const disposables: (() => void)[] = []
   let layoutNodes: NodeLayout<T>[] = []
   const componentEl = document.createElement('div')
-  const mainEl = document.createElement('main')
   const canvas = document.createElement('canvas')
   const c = canvas.getContext('2d')!
   let width = 0
@@ -194,11 +193,10 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     const oldWidth = width
     const oldHeight = height
     const ratio = window.devicePixelRatio || 1
-    width = Math.min(mainEl.clientWidth, 1600)
+    width = Math.min(componentEl.clientWidth, 1600)
     height = Math.max(Math.round(width / 2), innerHeight - 200)
     canvas.style.width = width + 'px'
     canvas.style.height = height + 'px'
-    mainEl.style.height = height + 'px'
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
     c.scale(ratio, ratio)
@@ -549,9 +547,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     disposables.length = 0
   }
 
-  // componentEl.id = styles.treemapPanel
-  mainEl.append(canvas)
-  componentEl.append(mainEl)
+  componentEl.append(canvas)
 
   return {
     el: componentEl,

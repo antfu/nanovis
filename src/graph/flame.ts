@@ -49,8 +49,18 @@ export function createFlame<T>(tree: Tree<T>, options: CreateFlameOptions<T> = {
   let viewportMin = 0
   let viewportMax = totalBytes
   const componentEl = document.createElement('div')
-  const mainEl = document.createElement('main')
+  const mainEl = document.createElement('div')
   const canvas = document.createElement('canvas')
+
+  Object.assign(mainEl.style, {
+    position: 'relative',
+  })
+  Object.assign(canvas.style, {
+    position: 'absolute',
+    left: (-CONSTANT_MARGIN) + 'px',
+    top: '0',
+  })
+
   const c = canvas.getContext('2d')!
   let width = 0
   let height = 0
