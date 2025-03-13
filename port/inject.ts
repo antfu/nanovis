@@ -1,8 +1,8 @@
-let doc = document
-let math = Math
-let rAF = requestAnimationFrame
-let storage = localStorage
-let win = window
+const doc = document
+const math = Math
+const rAF = requestAnimationFrame
+const storage = localStorage
+const win = window
 
 export {
   doc as document,

@@ -21,22 +21,22 @@ enum CHART {
   FLAME,
 }
 
-let startPanel = document.getElementById('startPanel') as HTMLDivElement
-let resultsPanel = document.getElementById('resultsPanel') as HTMLDivElement
-let chartPanel = document.getElementById('chartPanel') as HTMLDivElement
-let useTreemap = document.getElementById('useTreemap') as HTMLAnchorElement
-let useSunburst = document.getElementById('useSunburst') as HTMLAnchorElement
-let useFlame = document.getElementById('useFlame') as HTMLAnchorElement
+const startPanel = document.getElementById('startPanel') as HTMLDivElement
+const resultsPanel = document.getElementById('resultsPanel') as HTMLDivElement
+const chartPanel = document.getElementById('chartPanel') as HTMLDivElement
+const useTreemap = document.getElementById('useTreemap') as HTMLAnchorElement
+const useSunburst = document.getElementById('useSunburst') as HTMLAnchorElement
+const useFlame = document.getElementById('useFlame') as HTMLAnchorElement
 let chartMode = CHART.NONE
 
-let isPlainObject = (value: any): boolean => {
+function isPlainObject (value: any): boolean {
   return typeof value === 'object' && value !== null && !(value instanceof Array)
 }
 
-export let finishLoading = (json: string): void => {
-  let metafile: Metafile = JSON.parse(json)
+export function finishLoading (json: string): void {
+  const metafile: Metafile = JSON.parse(json)
 
-  let useChart = (use: CHART): void => {
+  const useChart = (use: CHART): void => {
     if (chartMode !== use) {
       if (chartMode === CHART.TREEMAP) useTreemap.classList.remove(styles.active)
       else if (chartMode === CHART.SUNBURST) useSunburst.classList.remove(styles.active)
@@ -65,7 +65,7 @@ export let finishLoading = (json: string): void => {
     }
   }
 
-  let useColor = (use: COLOR): void => {
+  const useColor = (use: COLOR): void => {
     if (colorMode.value !== use) {
       colorMode.value = use
       updateColorMapping(metafile, colorMode.value)
@@ -92,7 +92,7 @@ export let finishLoading = (json: string): void => {
 }
 
 // let docElemDataset = document.documentElement.dataset
-let updateTheme = () => {
+function updateTheme () {
   // Keep the dark/light mode theme up to date with the rest of the site
   // docElemDataset.theme = localStorageGetItem('theme') + ''
   if (darkModeListener) darkModeListener()

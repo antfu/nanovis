@@ -20,7 +20,6 @@ export default antfu(
   .append({
     files: portFiles,
     rules: {
-      'prefer-const': 0,
       'prefer-template': 0,
       'unicorn/no-instanceof-builtins': 0,
       'ts/no-use-before-define': 0,

@@ -28,14 +28,14 @@ interface Info {
   importers_: Record<string, ImportRecord>
 }
 
-let whyFileEl = document.createElement('div')
+const whyFileEl = document.createElement('div')
 let cachedMetafile: Metafile | undefined
 let cachedInfo: Info | undefined
 let elementToFocusAfterHide: HTMLElement | null = null
-let isIdentifier = /^\w[\w\d]*$/
+const isIdentifier = /^\w[\w\d]*$/
 
-export let isWhyFileVisible = () => whyFileEl.parentElement !== null
-export let hideWhyFile = () => {
+export const isWhyFileVisible = () => whyFileEl.parentElement !== null
+export function hideWhyFile () {
   whyFileEl.remove()
   if (elementToFocusAfterHide) {
     elementToFocusAfterHide.focus()
@@ -45,21 +45,21 @@ export let hideWhyFile = () => {
 
 // This calculates a map from each module to the module that
 // imports it on the closest path toward an entry point module
-export let computeImporters = (metafile: Metafile): Info => {
-  let inputs = metafile.inputs
-  let outputs = metafile.outputs
-  let entryPoints: Record<string, string> = {}
-  let importers: Record<string, ImportRecord> = {}
-  let allEntryPointOutputs: string[] = []
-  let crossChunkImports: Record<string, boolean> = {}
+export function computeImporters (metafile: Metafile): Info {
+  const inputs = metafile.inputs
+  const outputs = metafile.outputs
+  const entryPoints: Record<string, string> = {}
+  const importers: Record<string, ImportRecord> = {}
+  const allEntryPointOutputs: string[] = []
+  const crossChunkImports: Record<string, boolean> = {}
 
-  for (let o in outputs) {
-    let output = outputs[o]
-    let entryPoint = output.entryPoint
+  for (const o in outputs) {
+    const output = outputs[o]
+    const entryPoint = output.entryPoint
     if (entryPoint) {
       entryPoints[entryPoint] = o
       allEntryPointOutputs.push(o)
-      for (let record of output.imports) {
+      for (const record of output.imports) {
         if (!record.external && !hasOwnProperty.call(crossChunkImports, record.path)) {
           crossChunkImports[record.path] = true
         }
@@ -72,8 +72,8 @@ export let computeImporters = (metafile: Metafile): Info => {
   // First try to find the entry points that aren't imported into other chunks.
   // This happens for dynamic "import()" expressions (they are considered entry
   // points, but are still imported into other chunks).
-  for (let o of allEntryPointOutputs) {
-    let entryPoint = outputs[o].entryPoint!
+  for (const o of allEntryPointOutputs) {
+    const entryPoint = outputs[o].entryPoint!
     if (!hasOwnProperty.call(crossChunkImports, o)) {
       importers[entryPoint] = { inputPath_: entryPoint, originalPath_: undefined, kind_: 'entry-point', with_: undefined }
       current.push(entryPoint)
@@ -83,8 +83,8 @@ export let computeImporters = (metafile: Metafile): Info => {
   // If that didn't work (perhaps all entry points import each other?),
   // then fall back to treating all of the entry points as the roots.
   if (!current.length) {
-    for (let o of allEntryPointOutputs) {
-      let entryPoint = outputs[o].entryPoint!
+    for (const o of allEntryPointOutputs) {
+      const entryPoint = outputs[o].entryPoint!
       importers[entryPoint] = { inputPath_: entryPoint, originalPath_: undefined, kind_: 'entry-point', with_: undefined }
       current.push(entryPoint)
     }
@@ -93,12 +93,12 @@ export let computeImporters = (metafile: Metafile): Info => {
   // Do a depth-first search through the graph until no more nodes are visited.
   // This way the resulting map stores the shortest path to an entry point.
   while (current.length > 0) {
-    let next: string[] = []
+    const next: string[] = []
 
-    for (let path of current) {
-      let input = inputs[path]
+    for (const path of current) {
+      const input = inputs[path]
 
-      for (let record of input.imports) {
+      for (const record of input.imports) {
         if (!record.external && !hasOwnProperty.call(importers, record.path)) {
           importers[record.path] = {
             inputPath_: path,
@@ -120,9 +120,9 @@ export let computeImporters = (metafile: Metafile): Info => {
   }
 }
 
-export let showWhyFile = (metafile: Metafile, path: string, bytesInOutput: number | null): void => {
-  let input = metafile.inputs[path]
-  let activeEl = document.activeElement
+export function showWhyFile (metafile: Metafile, path: string, bytesInOutput: number | null): void {
+  const input = metafile.inputs[path]
+  const activeEl = document.activeElement
   if (!input) return
 
   if (!cachedInfo || cachedMetafile !== metafile) {
@@ -135,7 +135,7 @@ export let showWhyFile = (metafile: Metafile, path: string, bytesInOutput: numbe
     elementToFocusAfterHide = activeEl as HTMLElement
   }
 
-  let dialogEl = document.createElement('div')
+  const dialogEl = document.createElement('div')
   dialogEl.className = styles.dialog
   dialogEl.innerHTML = ''
     + '<h2>' + textToHTML(path) + '</h2>'
@@ -150,7 +150,7 @@ export let showWhyFile = (metafile: Metafile, path: string, bytesInOutput: numbe
 
   tryToExplainWhyFileIsInBundle(dialogEl, cachedInfo, path)
 
-  let closeButtonEl = document.createElement('a')
+  const closeButtonEl = document.createElement('a')
   closeButtonEl.className = styles.closeButton
   closeButtonEl.href = 'javascript:void 0'
   closeButtonEl.onclick = hideWhyFile
@@ -186,14 +186,14 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
   }
 
   // Trace from this file back to the root entry point
-  let importers = info.importers_
+  const importers = info.importers_
   let current = path
-  let items: Item[] = [{
+  const items: Item[] = [{
     inputPath_: path,
     import_: null,
   }]
   while (true) {
-    let importer = importers[current]
+    const importer = importers[current]
     if (!importer) {
       // This can happen to files that are implicitly included such as with the "inject" feature
       return
@@ -216,13 +216,13 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
   items.reverse()
 
   // Pretty-print the trace
-  let entryPoints = info.entryPoints_
+  const entryPoints = info.entryPoints_
   let outputFileEl: HTMLDivElement | undefined
   let label = 'Entry point'
   el.append('This file is included in the bundle because:')
-  for (let item of items) {
+  for (const item of items) {
     if (hasOwnProperty.call(entryPoints, item.inputPath_)) {
-      let outputPathEl = document.createElement('div')
+      const outputPathEl = document.createElement('div')
       outputFileEl = document.createElement('div')
       outputFileEl.className = styles.outputFile
       outputPathEl.className = styles.outputPath
@@ -237,8 +237,8 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
       return
     }
 
-    let labelEl = createText(label + ' ')
-    let targetEl = createText(' is included in the bundle.\n')
+    const labelEl = createText(label + ' ')
+    const targetEl = createText(' is included in the bundle.\n')
     if (outputFileEl.firstChild) outputFileEl.append('\n')
     outputFileEl.append(
       labelEl,
@@ -246,11 +246,11 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
       targetEl,
     )
 
-    let record = item.import_
+    const record = item.import_
     if (record) {
-      let originalPath = record.originalPath_ || nodeModulesPackagePathOrNull(record.inputPath_) || posixRelPath(record.inputPath_, posixDirname(item.inputPath_))
-      let preEl = document.createElement('pre')
-      let arrowEl = document.createElement('span')
+      const originalPath = record.originalPath_ || nodeModulesPackagePathOrNull(record.inputPath_) || posixRelPath(record.inputPath_, posixDirname(item.inputPath_))
+      const preEl = document.createElement('pre')
+      const arrowEl = document.createElement('span')
       arrowEl.className = hasOwnProperty.call(entryPoints, record.inputPath_) ? styles.longArrow : styles.arrow
 
       if (record.kind_ === 'import-statement') {
@@ -324,15 +324,15 @@ let tryToExplainWhyFileIsInBundle = (el: HTMLElement, info: Info, path: string):
 }
 
 let appendImportAttributes = (el: HTMLElement, attrs: Record<string, string | Record<string, string>>): void => {
-  let keys = Object.keys(attrs)
+  const keys = Object.keys(attrs)
   if (keys.length === 0) {
     el.append('{}')
     return
   }
   el.append('{ ')
   for (let i = 0; i < keys.length; i++) {
-    let key = keys[i]
-    let value = attrs[key]
+    const key = keys[i]
+    const value = attrs[key]
     if (i > 0) el.append(', ')
     el.append(
       isIdentifier.test(key) ? key : createSpanWithClass(styles.string, JSON.stringify(key)),

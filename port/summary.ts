@@ -12,26 +12,22 @@ enum CONSTANTS {
   FORMAT_WIDTH = 200,
 }
 
-let summaryPanel = document.getElementById('summaryPanel') as HTMLDivElement
-let countedFiles = (count: number) => (count === 1 ? 'file' : 'files')
+const summaryPanel = document.getElementById('summaryPanel') as HTMLDivElement
+const countedFiles = (count: number) => (count === 1 ? 'file' : 'files')
 
-export let showSummary = (metafile: Metafile, toggleColor: () => void): void => {
-  let inputs = metafile.inputs
-  let outputs = metafile.outputs
+export function showSummary (metafile: Metafile, toggleColor: () => void): void {
+  const inputs = metafile.inputs
+  const outputs = metafile.outputs
   let fileCountIn = 0
   let fileCountOut = 0
   let totalBytesIn = 0
   let totalBytesOut = 0
   let esmByteCountIn = 0
   let cjsByteCountIn = 0
-  // let otherByteCountIn = 0
-  let esmWidth: number
-  let cjsWidth: number
-  let formatBreakdownEl: HTMLAnchorElement | undefined
 
-  for (let file in inputs) {
-    let input = inputs[file]
-    let format = input.format
+  for (const file in inputs) {
+    const input = inputs[file]
+    const format = input.format
     if (format === 'esm') esmByteCountIn += input.bytes
     else if (format === 'cjs') cjsByteCountIn += input.bytes
     else {
@@ -41,15 +37,15 @@ export let showSummary = (metafile: Metafile, toggleColor: () => void): void => 
     totalBytesIn += input.bytes
   }
 
-  for (let file in outputs) {
+  for (const file in outputs) {
     if (!isSourceMapPath(file)) {
       fileCountOut++
       totalBytesOut += outputs[file].bytes
     }
   }
 
-  esmWidth = Math.round(CONSTANTS.FORMAT_WIDTH * esmByteCountIn / totalBytesIn)
-  cjsWidth = Math.round(CONSTANTS.FORMAT_WIDTH * cjsByteCountIn / totalBytesIn)
+  const esmWidth = Math.round(CONSTANTS.FORMAT_WIDTH * esmByteCountIn / totalBytesIn)
+  const cjsWidth = Math.round(CONSTANTS.FORMAT_WIDTH * cjsByteCountIn / totalBytesIn)
 
   summaryPanel.innerHTML = ''
     + '<table><tr>'
@@ -81,6 +77,7 @@ export let showSummary = (metafile: Metafile, toggleColor: () => void): void => 
       + '</a>'
       : '')
 
-  formatBreakdownEl = summaryPanel.querySelector('.' + styles.formatBreakdown) as HTMLAnchorElement | undefined
-  if (formatBreakdownEl) formatBreakdownEl.onclick = toggleColor
+  const formatBreakdownEl = summaryPanel.querySelector('.' + styles.formatBreakdown) as HTMLAnchorElement | undefined
+  if (formatBreakdownEl) 
+      formatBreakdownEl.onclick = toggleColor
 }

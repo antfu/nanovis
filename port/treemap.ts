@@ -63,16 +63,16 @@ enum Culling {
 }
 
 function analyzeDirectoryTree(metafile: Metafile): Tree {
-  let outputs = metafile.outputs
+  const outputs = metafile.outputs
   let totalBytes = 0
   let maxDepth = 0
-  let nodes: TreeNode[] = []
+  const nodes: TreeNode[] = []
   let commonPrefix: string[] | undefined
 
-  let sortChildren = (node: TreeNodeInProgress, isOutputFile: boolean): TreeNode => {
-    let children = node.children_
-    let sorted: TreeNode[] = []
-    for (let file in children) {
+  const sortChildren = (node: TreeNodeInProgress, isOutputFile: boolean): TreeNode => {
+    const children = node.children_
+    const sorted: TreeNode[] = []
+    for (const file in children) {
       sorted.push(sortChildren(children[file], false))
     }
     return {
@@ -85,25 +85,25 @@ function analyzeDirectoryTree(metafile: Metafile): Tree {
     }
   }
 
-  for (let o in outputs) {
+  for (const o in outputs) {
     // Find the common directory prefix, not including the file name
-    let parts = splitPathBySlash(o)
+    const parts = splitPathBySlash(o)
     parts.pop()
     commonPrefix = commonPrefixFinder(parts.join('/'), commonPrefix)
   }
 
-  for (let o in outputs) {
+  for (const o in outputs) {
     if (isSourceMapPath(o)) continue
 
-    let name = commonPrefix ? splitPathBySlash(o).slice(commonPrefix.length).join('/') : o
-    let node: TreeNodeInProgress = { name_: name, inputPath_: '', bytesInOutput_: 0, children_: {} }
-    let output = outputs[o]
-    let inputs = output.inputs
-    let bytes = output.bytes
+    const name = commonPrefix ? splitPathBySlash(o).slice(commonPrefix.length).join('/') : o
+    const node: TreeNodeInProgress = { name_: name, inputPath_: '', bytesInOutput_: 0, children_: {} }
+    const output = outputs[o]
+    const inputs = output.inputs
+    const bytes = output.bytes
 
     // Accumulate the input files that contributed to this output file
-    for (let i in inputs) {
-      let depth = accumulatePath(node, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
+    for (const i in inputs) {
+      const depth = accumulatePath(node, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
       if (depth > maxDepth) maxDepth = depth
     }
 
@@ -115,22 +115,22 @@ function analyzeDirectoryTree(metafile: Metafile): Tree {
   // Unwrap common nested directories
   stop: while (true) {
     let prefix: string | undefined
-    for (let node of nodes) {
-      let children = node.sortedChildren_
+    for (const node of nodes) {
+      const children = node.sortedChildren_
       if (!children.length) continue
       if (children.length > 1 || children[0].sortedChildren_.length !== 1) break stop
-      let name = children[0].name_
+      const name = children[0].name_
       if (prefix === undefined) prefix = name
       else if (prefix !== name) break stop
     }
     if (prefix === undefined) break
 
     // Remove one level
-    for (let node of nodes) {
+    for (const node of nodes) {
       let children = node.sortedChildren_
       if (children.length) {
         children = children[0].sortedChildren_
-        for (let child of children) child.name_ = prefix + child.name_
+        for (const child of children) child.name_ = prefix + child.name_
         node.sortedChildren_ = children
       }
     }
@@ -138,9 +138,9 @@ function analyzeDirectoryTree(metafile: Metafile): Tree {
   }
 
   // Add entries for the remaining space in each chunk
-  for (let node of nodes) {
+  for (const node of nodes) {
     let childBytes = 0
-    for (let child of node.sortedChildren_) {
+    for (const child of node.sortedChildren_) {
       childBytes += child.bytesInOutput_
     }
     if (childBytes < node.bytesInOutput_) {
@@ -177,34 +177,34 @@ interface NodeLayout {
 
 // "Squarified Treemaps": https://www.win.tue.nl/~vanwijk/stm.pdf
 function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: number, h: number): NodeLayout[] {
-  let children: NodeLayout[] = []
+  const children: NodeLayout[] = []
 
-  let worst = (start: number, end: number, shortestSide: number, totalArea: number, bytesToArea: number): number => {
-    let maxArea = sortedChildren[start].bytesInOutput_ * bytesToArea
-    let minArea = sortedChildren[end].bytesInOutput_ * bytesToArea
+  const worst = (start: number, end: number, shortestSide: number, totalArea: number, bytesToArea: number): number => {
+    const maxArea = sortedChildren[start].bytesInOutput_ * bytesToArea
+    const minArea = sortedChildren[end].bytesInOutput_ * bytesToArea
     return Math.max(
       (shortestSide * shortestSide * maxArea) / (totalArea * totalArea),
       totalArea * totalArea / (shortestSide * shortestSide * minArea),
     )
   }
 
-  let squarify = (start: number, x: number, y: number, w: number, h: number): void => {
+  const squarify = (start: number, x: number, y: number, w: number, h: number): void => {
     while (start < sortedChildren.length) {
       let totalBytes = 0
       for (let i = start; i < sortedChildren.length; i++) {
         totalBytes += sortedChildren[i].bytesInOutput_
       }
 
-      let shortestSide = Math.min(w, h)
-      let bytesToArea = (w * h) / totalBytes
+      const shortestSide = Math.min(w, h)
+      const bytesToArea = (w * h) / totalBytes
       let end = start
       let areaInRun = 0
       let oldWorst = 0
 
       // Find the optimal split
       while (end < sortedChildren.length) {
-        let area = sortedChildren[end].bytesInOutput_ * bytesToArea
-        let newWorst = worst(start, end, shortestSide, areaInRun + area, bytesToArea)
+        const area = sortedChildren[end].bytesInOutput_ * bytesToArea
+        const newWorst = worst(start, end, shortestSide, areaInRun + area, bytesToArea)
         if (end > start && oldWorst < newWorst) break
         areaInRun += area
         oldWorst = newWorst
@@ -212,14 +212,14 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
       }
 
       // Layout the run up to the split
-      let split = Math.round(areaInRun / shortestSide)
+      const split = Math.round(areaInRun / shortestSide)
       let areaInLayout = 0
       for (let i = start; i < end; i++) {
-        let child = sortedChildren[i]
-        let area = child.bytesInOutput_ * bytesToArea
-        let lower = Math.round(shortestSide * areaInLayout / areaInRun)
-        let upper = Math.round(shortestSide * (areaInLayout + area) / areaInRun)
-        let [cx, cy, cw, ch] = w >= h
+        const child = sortedChildren[i]
+        const area = child.bytesInOutput_ * bytesToArea
+        const lower = Math.round(shortestSide * areaInLayout / areaInRun)
+        const upper = Math.round(shortestSide * (areaInLayout + area) / areaInRun)
+        const [cx, cy, cw, ch] = w >= h
           ? [x, y + lower, split, upper - lower]
           : [x + lower, y, upper - lower, split]
         children.push({
@@ -266,12 +266,12 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
   updateColorMapping(metafile, colorMode)
 
-  let tree = analyzeDirectoryTree(metafile)
+  const tree = analyzeDirectoryTree(metafile)
   let layoutNodes: NodeLayout[] = []
-  let componentEl = document.createElement('div')
-  let mainEl = document.createElement('main')
-  let canvas = document.createElement('canvas')
-  let c = canvas.getContext('2d')!
+  const componentEl = document.createElement('div')
+  const mainEl = document.createElement('main')
+  const canvas = document.createElement('canvas')
+  const c = canvas.getContext('2d')!
   let width = 0
   let height = 0
   let animationFrame: number | null = null
@@ -280,8 +280,8 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   let bgOriginY = 0
   let bgColor = ''
   let fgOnColor = ''
-  let normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
-  let boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
+  const normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
+  const boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
   let ellipsisWidth = 0
   let currentWidthCache: Record<number, number> = normalWidthCache
   let currentNode: NodeLayout | null = null
@@ -293,21 +293,21 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   let animationSource: NodeLayout | null = null
   let animationTarget: NodeLayout | null = null
 
-  let updateCurrentLayout = (): void => {
+  const updateCurrentLayout = (): void => {
     if (currentNode) {
-      let [ox1, oy1, ow, oh] = currentNode.box_
-      let ox2 = ox1 + ow
-      let oy2 = oy1 + oh
-      let nx1 = Math.round(width / 10)
-      let ny1 = Math.round(height / 10)
-      let nx2 = width - nx1 - 1
-      let ny2 = height - ny1 - 1
-      let t = animationTarget ? animationBlend : 1 - animationBlend
-      let x1 = Math.round(ox1 + (nx1 - ox1) * t)
-      let y1 = Math.round(oy1 + (ny1 - oy1) * t)
-      let x2 = Math.round(ox2 + (nx2 - ox2) * t)
-      let y2 = Math.round(oy2 + (ny2 - oy2) * t)
-      let wrap64 = (x: number) => x - Math.floor(x / 64 - 0.5) * 64
+      const [ox1, oy1, ow, oh] = currentNode.box_
+      const ox2 = ox1 + ow
+      const oy2 = oy1 + oh
+      const nx1 = Math.round(width / 10)
+      const ny1 = Math.round(height / 10)
+      const nx2 = width - nx1 - 1
+      const ny2 = height - ny1 - 1
+      const t = animationTarget ? animationBlend : 1 - animationBlend
+      const x1 = Math.round(ox1 + (nx1 - ox1) * t)
+      const y1 = Math.round(oy1 + (ny1 - oy1) * t)
+      const x2 = Math.round(ox2 + (nx2 - ox2) * t)
+      const y2 = Math.round(oy2 + (ny2 - oy2) * t)
+      const wrap64 = (x: number) => x - Math.floor(x / 64 - 0.5) * 64
       currentLayout = layoutTreemap([currentNode.node_], x1, y1, x2 - x1, y2 - y1)[0]
       currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
       currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
@@ -318,10 +318,10 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     }
   }
 
-  let resize = (): void => {
-    let oldWidth = width
-    let oldHeight = height
-    let ratio = window.devicePixelRatio || 1
+  const resize = (): void => {
+    const oldWidth = width
+    const oldHeight = height
+    const ratio = window.devicePixelRatio || 1
     width = Math.min(mainEl.clientWidth, 1600)
     height = Math.max(Math.round(width / 2), innerHeight - 200)
     canvas.style.width = width + 'px'
@@ -337,9 +337,9 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     draw()
   }
 
-  let tick = (): void => {
-    let oldAnimationBlend = animationBlend
-    let oldCurrentNode = currentNode
+  const tick = (): void => {
+    const oldAnimationBlend = animationBlend
+    const oldCurrentNode = currentNode
     animationBlend = (now() - animationStart) / CONSTANTS.ANIMATION_DURATION
 
     if (animationBlend < 0 || animationBlend > 1) {
@@ -360,11 +360,11 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     draw()
   }
 
-  let invalidate = (): void => {
+  const invalidate = (): void => {
     if (animationFrame === null) animationFrame = requestAnimationFrame(tick)
   }
 
-  let charCodeWidth = (ch: number): number => {
+  const charCodeWidth = (ch: number): number => {
     let width = currentWidthCache[ch]
     if (width === undefined) {
       width = c.measureText(String.fromCharCode(ch)).width
@@ -373,13 +373,13 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     return width
   }
 
-  let textOverflowEllipsis = (text: string, width: number): [string, number] => {
+  const textOverflowEllipsis = (text: string, width: number): [string, number] => {
     if (width < ellipsisWidth) return ['', 0]
     let textWidth = 0
-    let n = text.length
+    const n = text.length
     let i = 0
     while (i < n) {
-      let charWidth = charCodeWidth(text.charCodeAt(i))
+      const charWidth = charCodeWidth(text.charCodeAt(i))
       if (width < textWidth + ellipsisWidth + charWidth) {
         return [text.slice(0, i) + '...', textWidth + ellipsisWidth]
       }
@@ -389,22 +389,22 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     return [text, textWidth]
   }
 
-  let drawNodeBackground = (layout: NodeLayout, culling: Culling): DrawFlags => {
-    let node = layout.node_
-    let [x, y, w, h] = layout.box_
+  const drawNodeBackground = (layout: NodeLayout, culling: Culling): DrawFlags => {
+    const node = layout.node_
+    const [x, y, w, h] = layout.box_
     let flags =
       (node === hoveredNode ? DrawFlags.CONTAINS_HOVER : 0) |
       (layout === animationTarget ? DrawFlags.CONTAINS_TARGET : 0)
 
     // Improve performance by not drawing backgrounds unnecessarily
     if (culling === Culling.Enabled && currentLayout) {
-      let [cx, cy, cw, ch] = currentLayout.box_
+      const [cx, cy, cw, ch] = currentLayout.box_
       if (x >= cx && y >= cy && x + w <= cx + cw && y + h <= cy + ch) {
         culling = Culling.Culled
       }
     }
 
-    for (let child of layout.children_) {
+    for (const child of layout.children_) {
       flags |= drawNodeBackground(child, culling)
     }
 
@@ -425,10 +425,10 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     return flags
   }
 
-  let drawNodeForeground = (layout: NodeLayout, inCurrentNode: boolean): void => {
-    let node = layout.node_
-    let [x, y, w, h] = layout.box_
-    let isOutputFile = node.isOutputFile_
+  const drawNodeForeground = (layout: NodeLayout, inCurrentNode: boolean): void => {
+    const node = layout.node_
+    const [x, y, w, h] = layout.box_
+    const isOutputFile = node.isOutputFile_
 
     // Draw the hover highlight
     if (hoveredNode === node && !isOutputFile && (!currentNode || inCurrentNode)) {
@@ -452,9 +452,9 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
       }
 
       // Measure the node name
-      let maxWidth = w - CONSTANTS.INSET_X
-      let textY = y + Math.round(CONSTANTS.INSET_Y / 2)
-      let [nameText, nameWidth] = textOverflowEllipsis(node.name_, maxWidth)
+      const maxWidth = w - CONSTANTS.INSET_X
+      const textY = y + Math.round(CONSTANTS.INSET_Y / 2)
+      const [nameText, nameWidth] = textOverflowEllipsis(node.name_, maxWidth)
       let textX = x + Math.round((w - nameWidth) / 2)
 
       // Switch to the normal font
@@ -466,8 +466,8 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
       if (nameText === node.name_ && node.sortedChildren_.length) {
-        let detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, '') : node.sizeText_)
-        let [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
+        const detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, '') : node.sizeText_)
+        const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
         c.globalAlpha = 0.5
         c.fillText(sizeText, textX + nameWidth, textY)
@@ -493,22 +493,22 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
       if (h > CONSTANTS.INSET_Y + 16 && !node.sortedChildren_.length) {
-        let detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, '') : node.sizeText_
-        let [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth)
+        const detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, '') : node.sizeText_
+        const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth)
         c.globalAlpha = 0.5
         c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + CONSTANTS.HEADER_HEIGHT + Math.round(h - CONSTANTS.INSET_Y) / 2)
         c.globalAlpha = 1
       }
 
       // Draw the children
-      for (let child of layout.children_) {
+      for (const child of layout.children_) {
         drawNodeForeground(child, inCurrentNode)
       }
     }
   }
 
   let draw = (): void => {
-    let bodyStyle = getComputedStyle(document.body)
+    const bodyStyle = getComputedStyle(document.body)
     bgColor = bodyStyle.getPropertyValue('--bg')
     fgOnColor = bodyStyle.getPropertyValue('--fg-on')
     animationFrame = null
@@ -520,20 +520,20 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     // Draw the full tree first
     let nodeContainingHover: NodeLayout | null = null
     let nodeContainingTarget: NodeLayout | null = null
-    let transition = !currentLayout ? 0 : !animationSource
+    const transition = !currentLayout ? 0 : !animationSource
       ? animationBlend : !animationTarget ? 1 - animationBlend : 1
     bgOriginX = bgOriginY = 0
-    for (let node of layoutNodes) {
-      let flags = drawNodeBackground(node, Culling.Enabled)
+    for (const node of layoutNodes) {
+      const flags = drawNodeBackground(node, Culling.Enabled)
       if (flags & DrawFlags.CONTAINS_HOVER) nodeContainingHover = node
       if (flags & DrawFlags.CONTAINS_TARGET) nodeContainingTarget = node
     }
-    for (let node of layoutNodes) {
+    for (const node of layoutNodes) {
       drawNodeForeground(node, false)
 
       // Fade out nodes that aren't being hovered
       if (currentLayout || (nodeContainingHover && node !== nodeContainingHover)) {
-        let [x, y, w, h] = node.box_
+        const [x, y, w, h] = node.box_
         c.globalAlpha = 0.6 * (!currentLayout || (!animationSource &&
           nodeContainingTarget && node !== nodeContainingTarget) ? 1 : transition)
         c.fillStyle = bgColor
@@ -544,9 +544,9 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
 
     // Draw the current node on top
     if (currentLayout) {
-      let [x, y, w, h] = currentLayout.box_
-      let matrix = c.getTransform()
-      let scale = Math.sqrt(matrix.a * matrix.d)
+      const [x, y, w, h] = currentLayout.box_
+      const matrix = c.getTransform()
+      const scale = Math.sqrt(matrix.a * matrix.d)
 
       // Draw a shadow under the node
       c.save()
@@ -586,10 +586,10 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   //   tooltipEl.style.display = 'none'
   // }
 
-  let hitTestNode = (mouseEvent: MouseEvent | WheelEvent): NodeLayout | null => {
-    let visit = (nodes: NodeLayout[], isTopLevel: boolean): NodeLayout | null => {
-      for (let node of nodes) {
-        let [x, y, w, h] = node.box_
+  const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): NodeLayout | null => {
+    const visit = (nodes: NodeLayout[], isTopLevel: boolean): NodeLayout | null => {
+      for (const node of nodes) {
+        const [x, y, w, h] = node.box_
         if (mouseX >= x && mouseY >= y && mouseX < x + w && mouseY < y + h) {
           return visit(node.children_, false) || (isTopLevel ? null : node)
         }
@@ -607,13 +607,13 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     return currentLayout ? visit([currentLayout], false) : visit(layoutNodes, true)
   }
 
-  let updateHover = (e: MouseEvent): void => {
-    let layout = hitTestNode(e)
+  const updateHover = (e: MouseEvent): void => {
+    const layout = hitTestNode(e)
     changeHoveredNode(layout && layout.node_)
 
     // Show a tooltip for hovered nodes
     if (layout) {
-      let node = layout.node_
+      const node = layout.node_
       // let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
       // let nameSplit = tooltip.length - node.name_.length
       // tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
@@ -635,15 +635,15 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     }
   }
 
-  let searchFor = (children: NodeLayout[], node: TreeNode): NodeLayout | null => {
-    for (let child of children) {
-      let result = child.node_ === node ? child : searchFor(child.children_, node)
+  const searchFor = (children: NodeLayout[], node: TreeNode): NodeLayout | null => {
+    for (const child of children) {
+      const result = child.node_ === node ? child : searchFor(child.children_, node)
       if (result) return result
     }
     return null
   }
 
-  let changeCurrentNode = (node: NodeLayout | null): void => {
+  const changeCurrentNode = (node: NodeLayout | null): void => {
     if (currentNode !== node) {
       animationBlend = 0
       animationStart = now()
@@ -665,9 +665,9 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
   })
 
   componentEl.addEventListener('click', e => {
-    let layout = hitTestNode(e)
+    const layout = hitTestNode(e)
     if (layout) {
-      let node = layout.node_
+      const node = layout.node_
       if (!node.sortedChildren_.length) {
         // events.emit('hover', node, e)
         events.emit('click', node, e)

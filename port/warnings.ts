@@ -10,46 +10,46 @@ import { showWhyFile } from './whyfile'
 
 let previousMetafile: Metafile | undefined
 
-let generateWarnings = (metafile: Metafile): HTMLElement[] => {
-  let inputs = metafile.inputs
-  let resolvedPaths: Record<string, string[]> = {}
-  let warnings: HTMLElement[] = []
+function generateWarnings (metafile: Metafile): HTMLElement[] {
+  const inputs = metafile.inputs
+  const resolvedPaths: Record<string, string[]> = {}
+  const warnings: HTMLElement[] = []
 
-  for (let i in inputs) {
-    let input = inputs[i]
-    for (let record of input.imports) {
+  for (const i in inputs) {
+    const input = inputs[i]
+    for (const record of input.imports) {
       if (record.original && record.original[0] !== '.') {
-        let array = resolvedPaths[record.original] || (resolvedPaths[record.original] = [])
+        const array = resolvedPaths[record.original] || (resolvedPaths[record.original] = [])
         if (!array.includes(record.path)) array.push(record.path)
       }
     }
   }
 
-  for (let original in resolvedPaths) {
-    let array = resolvedPaths[original]
+  for (const original in resolvedPaths) {
+    const array = resolvedPaths[original]
 
     if (array.length > 1) {
-      let warningEl = document.createElement('div')
-      let listEl = document.createElement('ul')
+      const warningEl = document.createElement('div')
+      const listEl = document.createElement('ul')
       let commonPrefix: string[] | undefined
       let commonPostfix: string[] | undefined
 
       warningEl.className = styles.warning
       warningEl.innerHTML = 'The import path <code>' + textToHTML(original) + '</code> resolves to multiple files in the bundle:'
 
-      for (let path of array) {
+      for (const path of array) {
         commonPrefix = commonPrefixFinder(path, commonPrefix)
       }
 
-      for (let path of array) {
+      for (const path of array) {
         let parts = splitPathBySlash(path)
         if (commonPrefix) parts = parts.slice(commonPrefix.length)
         commonPostfix = commonPostfixFinder(parts.join('/'), commonPostfix)
       }
 
-      for (let path of array.sort()) {
+      for (const path of array.sort()) {
         let parts = splitPathBySlash(path).map(textToHTML)
-        let itemEl = document.createElement('li')
+        const itemEl = document.createElement('li')
         let html = '<pre><a href="javascript:void 0">'
         let postfix = ''
 
@@ -87,13 +87,13 @@ let generateWarnings = (metafile: Metafile): HTMLElement[] => {
   return warnings
 }
 
-export let showWarningsPanel = (metafile: Metafile): void => {
+export function showWarningsPanel (metafile: Metafile): void {
   if (previousMetafile === metafile) return
   previousMetafile = metafile
 
-  let warningsPanel = document.getElementById('warningsPanel') as HTMLDivElement
-  let warnings = generateWarnings(metafile)
-  let n = warnings.length
+  const warningsPanel = document.getElementById('warningsPanel') as HTMLDivElement
+  const warnings = generateWarnings(metafile)
+  const n = warnings.length
 
   if (n) {
     warningsPanel.innerHTML = ''
@@ -101,10 +101,10 @@ export let showWarningsPanel = (metafile: Metafile): void => {
       + '⚠️ This bundle has <b><a href="javascript:void 0">' + n + ' warning' + (n === 1 ? '' : 's') + '</a></b><span>.</span>'
       + '</div>'
 
-    let spanEl = warningsPanel.querySelector('span') as HTMLSpanElement
-    let contentEl = document.createElement('div')
+    const spanEl = warningsPanel.querySelector('span') as HTMLSpanElement
+    const contentEl = document.createElement('div')
     contentEl.className = styles.content
-    for (let warning of warnings) contentEl.append(warning)
+    for (const warning of warnings) contentEl.append(warning)
     warningsPanel.append(contentEl)
 
     warningsPanel.querySelector('a')!.onclick = () => {

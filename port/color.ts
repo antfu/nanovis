@@ -21,8 +21,8 @@ enum FORMATS {
 let previousPatternContext: CanvasRenderingContext2D | undefined
 let previousPatternRatio: number | undefined
 let previousPatternScale: number | undefined
-let patternCanvas = document.createElement('canvas')
-let patternContext = patternCanvas.getContext('2d')!
+const patternCanvas = document.createElement('canvas')
+const patternContext = patternCanvas.getContext('2d')!
 let patternScale = 1
 let pattern: CanvasPattern
 
@@ -35,31 +35,26 @@ export type ColorMapping = Record<string, Color>
 let colorMapping: ColorMapping = {}
 
 let afterColorMappingUpdate: (() => void) | null = null
-export let setAfterColorMappingUpdate = (callback: () => void) => afterColorMappingUpdate = callback
+export const setAfterColorMappingUpdate = (callback: () => void) => afterColorMappingUpdate = callback
 
-export let canvasFillStyleForInputPath = (
-  c: CanvasRenderingContext2D,
+export function canvasFillStyleForInputPath (c: CanvasRenderingContext2D,
   inputPath: string,
   originX: number,
   originY: number,
-  scale: number,
-): string | CanvasPattern => {
-  let color = colorMapping[inputPath] || otherColor
+  scale: number): string | CanvasPattern {
+  const color = colorMapping[inputPath] || otherColor
   if (color instanceof Array) {
-    let ratio = window.devicePixelRatio || 1
+    const ratio = window.devicePixelRatio || 1
     if (previousPatternContext !== c || previousPatternRatio !== ratio || previousPatternScale !== scale) {
-      let s = Math.round(64 * ratio) / 64
-      let t1: number
-      let t8: number
-      let lineWidth: number
-
+      const s = Math.round(64 * ratio) / 64
+     
       patternScale = scale
       patternScale = Math.log2(patternScale)
       patternScale -= Math.floor(patternScale)
-      t1 = patternScale
-      t8 = Math.min(1, 8 * t1)
+      const t1 = patternScale
+      const t8 = Math.min(1, 8 * t1)
       patternScale = 2**patternScale
-      lineWidth = 8 * Math.SQRT2 / patternScale
+      const lineWidth = 8 * Math.SQRT2 / patternScale
 
       previousPatternContext = c
       previousPatternRatio = ratio
@@ -116,8 +111,8 @@ export let canvasFillStyleForInputPath = (
   return color
 }
 
-export let cssBackgroundForInputPath = (inputPath: string): string => {
-  let color = colorMapping[inputPath] || otherColor
+export function cssBackgroundForInputPath (inputPath: string): string {
+  const color = colorMapping[inputPath] || otherColor
   if (color instanceof Array) {
     return `url('`
       + `data:image/svg+xml,`
@@ -132,22 +127,22 @@ export let cssBackgroundForInputPath = (inputPath: string): string => {
   return color
 }
 
-export let updateColorMapping = (metafile: Metafile, color: COLOR): void => {
+export function updateColorMapping (metafile: Metafile, color: COLOR): void {
   if (previousMetafile !== metafile) {
-    let outputs = metafile.outputs
+    const outputs = metafile.outputs
     previousMetafile = metafile
     previousColor = COLOR.NONE
     root = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
 
     // For each output file
-    for (let o in outputs) {
+    for (const o in outputs) {
       if (isSourceMapPath(o)) continue
 
-      let output = outputs[o]
-      let inputs = output.inputs
+      const output = outputs[o]
+      const inputs = output.inputs
 
       // Accumulate the input files that contributed to this output file
-      for (let i in inputs) {
+      for (const i in inputs) {
         accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
       }
     }
@@ -173,37 +168,37 @@ let assignColorsByDirectory = (
   startAngle: number,
   sweepAngle: number,
 ): void => {
-  let totalBytes = node.bytesInOutput_
-  let children = node.children_
-  let sorted: TreeNodeInProgress[] = []
+  const totalBytes = node.bytesInOutput_
+  const children = node.children_
+  const sorted: TreeNodeInProgress[] = []
 
   colorMapping[node.inputPath_] = hueAngleToColor(startAngle + sweepAngle / 2)
 
-  for (let file in children) {
+  for (const file in children) {
     sorted.push(children[file])
   }
 
-  for (let child of sorted.sort(orderChildrenBySize)) {
-    let childSweepAngle = child.bytesInOutput_ / totalBytes * sweepAngle
+  for (const child of sorted.sort(orderChildrenBySize)) {
+    const childSweepAngle = child.bytesInOutput_ / totalBytes * sweepAngle
     assignColorsByDirectory(colorMapping, child, startAngle, childSweepAngle)
     startAngle += childSweepAngle
   }
 }
 
-export let cjsColor = hueAngleToColor(3.5)
-export let esmColor = hueAngleToColor(1)
+export const cjsColor = hueAngleToColor(3.5)
+export const esmColor = hueAngleToColor(1)
 export let otherColor = '#CCC'
-let bothColor = [cjsColor, esmColor] as const
+const bothColor = [cjsColor, esmColor] as const
 
-let colorForFormats = (formats: FORMATS): Color => {
+function colorForFormats (formats: FORMATS): Color {
   if (!formats) return otherColor
   if (formats === FORMATS.CJS) return cjsColor
   if (formats === FORMATS.ESM) return esmColor
   return bothColor
 }
 
-export let moduleTypeLabelInputPath = (inputPath: string, prefix: string): string => {
-  let color = colorMapping[inputPath] || otherColor
+export function moduleTypeLabelInputPath (inputPath: string, prefix: string): string {
+  const color = colorMapping[inputPath] || otherColor
   if (color === otherColor) return ''
   if (color === esmColor) return prefix + 'ESM'
   if (color === cjsColor) return prefix + 'CJS'
@@ -211,18 +206,18 @@ export let moduleTypeLabelInputPath = (inputPath: string, prefix: string): strin
 }
 
 let assignColorsByFormat = (colorMapping: ColorMapping, node: TreeNodeInProgress): FORMATS => {
-  let children = node.children_
+  const children = node.children_
   let formats: FORMATS | 0 = 0
   let hasChild = false
 
-  for (let file in children) {
+  for (const file in children) {
     formats |= assignColorsByFormat(colorMapping, children[file])
     hasChild = true
   }
 
   if (!hasChild) {
-    let input = previousMetafile!.inputs[node.inputPath_]
-    let format = input && input.format
+    const input = previousMetafile!.inputs[node.inputPath_]
+    const format = input && input.format
     formats = format === 'esm' ? FORMATS.ESM : format === 'cjs' ? FORMATS.CJS : 0
   }
 

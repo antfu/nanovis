@@ -48,7 +48,7 @@ interface Tree {
   maxDepth_: number
 }
 
-let isParentOf = (parent: TreeNode, child: TreeNode | null): boolean => {
+function isParentOf (parent: TreeNode, child: TreeNode | null): boolean {
   while (child) {
     if (child === parent) return true
     child = child.parent_
@@ -56,15 +56,15 @@ let isParentOf = (parent: TreeNode, child: TreeNode | null): boolean => {
   return false
 }
 
-let analyzeDirectoryTree = (metafile: Metafile): Tree => {
-  let inputs = metafile.inputs
-  let outputs = metafile.outputs
-  let root: TreeNodeInProgress = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
+function analyzeDirectoryTree (metafile: Metafile): Tree {
+  const inputs = metafile.inputs
+  const outputs = metafile.outputs
+  const root: TreeNodeInProgress = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
 
-  let sortChildren = (node: TreeNodeInProgress): TreeNode => {
-    let children = node.children_
-    let sorted: TreeNode[] = []
-    for (let file in children) {
+  const sortChildren = (node: TreeNodeInProgress): TreeNode => {
+    const children = node.children_
+    const sorted: TreeNode[] = []
+    for (const file in children) {
       sorted.push(sortChildren(children[file]))
     }
     return {
@@ -75,10 +75,10 @@ let analyzeDirectoryTree = (metafile: Metafile): Tree => {
     }
   }
 
-  let setParents = (node: TreeNode, depth: number): number => {
+  const setParents = (node: TreeNode, depth: number): number => {
     let maxDepth = 0
-    for (let child of node.sortedChildren_) {
-      let childDepth = setParents(child, depth + 1)
+    for (const child of node.sortedChildren_) {
+      const childDepth = setParents(child, depth + 1)
       child.parent_ = node
       if (childDepth > maxDepth) maxDepth = childDepth
     }
@@ -86,19 +86,19 @@ let analyzeDirectoryTree = (metafile: Metafile): Tree => {
   }
 
   // Include the inputs with size 0 so we can see when something has been tree-shaken
-  for (let i in inputs) {
+  for (const i in inputs) {
     accumulatePath(root, stripDisabledPathPrefix(i), 0)
   }
 
   // For each output file
-  for (let o in outputs) {
+  for (const o in outputs) {
     if (isSourceMapPath(o)) continue
 
-    let output = outputs[o]
-    let inputs = output.inputs
+    const output = outputs[o]
+    const inputs = output.inputs
 
     // Accumulate the input files that contributed to this output file
-    for (let i in inputs) {
+    for (const i in inputs) {
       accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
     }
   }
@@ -122,15 +122,15 @@ interface Slice {
   sweepAngle_: number
 }
 
-let narrowSlice = (root: TreeNode, node: TreeNode, slice: Slice): void => {
+function narrowSlice (root: TreeNode, node: TreeNode, slice: Slice): void {
   if (root === node) return
 
-  let parent = node.parent_!
-  let totalBytes = parent.bytesInOutput_ || 1 // Don't divide by 0
+  const parent = node.parent_!
+  const totalBytes = parent.bytesInOutput_ || 1 // Don't divide by 0
   let bytesSoFar = 0
   narrowSlice(root, parent, slice)
 
-  for (let child of parent.sortedChildren_) {
+  for (const child of parent.sortedChildren_) {
     if (child === node) {
       slice.startAngle_ += slice.sweepAngle_ * bytesSoFar / totalBytes
       slice.sweepAngle_ = child.bytesInOutput_ / totalBytes * slice.sweepAngle_
@@ -142,18 +142,18 @@ let narrowSlice = (root: TreeNode, node: TreeNode, slice: Slice): void => {
   slice.depth_ += 1
 }
 
-let computeRadius = (depth: number): number => {
+function computeRadius (depth: number): number {
   return 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
 }
 
-export let createSunburst = (metafile: Metafile): HTMLDivElement => {
-  let componentEl = document.createElement('div')
-  let mainEl = document.createElement('main')
-  let tree = analyzeDirectoryTree(metafile)
+export function createSunburst (metafile: Metafile): HTMLDivElement {
+  const componentEl = document.createElement('div')
+  const mainEl = document.createElement('main')
+  const tree = analyzeDirectoryTree(metafile)
   let currentNode = tree.root_
   let hoveredNode: TreeNode | null = null
 
-  let changeCurrentNode = (node: TreeNode): void => {
+  const changeCurrentNode = (node: TreeNode): void => {
     if (currentNode !== node) {
       currentNode = node
       updateSunburst()
@@ -161,7 +161,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
     }
   }
 
-  let changeHoveredNode = (node: TreeNode | null): void => {
+  const changeHoveredNode = (node: TreeNode | null): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
       updateSunburst()
@@ -169,14 +169,14 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
     }
   }
 
-  let startSunburst = (): [() => void, () => void] => {
-    let leftEl = document.createElement('div')
-    let canvas = document.createElement('canvas')
-    let c = canvas.getContext('2d')!
+  const startSunburst = (): [() => void, () => void] => {
+    const leftEl = document.createElement('div')
+    const canvas = document.createElement('canvas')
+    const c = canvas.getContext('2d')!
 
-    let resize = (): void => {
-      let maxRadius = 2 * Math.ceil(computeRadius(tree.maxDepth_))
-      let ratio = window.devicePixelRatio || 1
+    const resize = (): void => {
+      const maxRadius = 2 * Math.ceil(computeRadius(tree.maxDepth_))
+      const ratio = window.devicePixelRatio || 1
       width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
       height = width
       centerX = width >> 1
@@ -193,16 +193,16 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
     // slices all merging together into a solid color. So we enforce a
     // minimum slice width of 2px and we also skip drawing slices that
     // have a tail edge less than 1.5px from the previous tail edge.
-    let drawNode = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number => {
-      let outerRadius = computeRadius(depth + 1)
+    const drawNode = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number => {
+      const outerRadius = computeRadius(depth + 1)
       if (outerRadius > centerY) return prevTailEdge // Don't draw slices that fall outside the canvas bounds
 
       if (node === hoveredNode) {
         flags |= FLAGS.HOVER
       }
 
-      let middleRadius = (innerRadius + outerRadius) / 2
-      let tailEdge = startAngle + sweepAngle
+      const middleRadius = (innerRadius + outerRadius) / 2
+      const tailEdge = startAngle + sweepAngle
       if (tailEdge - prevTailEdge < 1.5 / middleRadius) return prevTailEdge
       let clampedSweepAngle = 2 / middleRadius
       if (sweepAngle > clampedSweepAngle) clampedSweepAngle = sweepAngle
@@ -222,20 +222,20 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
 
       // Handle the stroke
       else {
-        let isFullCircle = clampedSweepAngle === Math.PI * 2
-        let moveToRadius = flags & FLAGS.CHAIN || isFullCircle ? outerRadius : innerRadius
+        const isFullCircle = clampedSweepAngle === Math.PI * 2
+        const moveToRadius = flags & FLAGS.CHAIN || isFullCircle ? outerRadius : innerRadius
         if (flags & FLAGS.ROOT && innerRadius > 0) c.arc(centerX, centerY, innerRadius, startAngle + clampedSweepAngle, startAngle, true)
         c.moveTo(centerX + moveToRadius * Math.cos(startAngle), centerY + moveToRadius * Math.sin(startAngle))
         c.arc(centerX, centerY, outerRadius, startAngle, startAngle + clampedSweepAngle, false)
         if (!isFullCircle) c.lineTo(centerX + innerRadius * Math.cos(startAngle + clampedSweepAngle), centerY + innerRadius * Math.sin(startAngle + clampedSweepAngle))
       }
 
-      let totalBytes = node.bytesInOutput_
+      const totalBytes = node.bytesInOutput_
       let childFlags = flags & (FLAGS.FILL | FLAGS.HOVER)
       let bytesSoFar = 0
       let childTailEdge = -Infinity
 
-      for (let child of node.sortedChildren_) {
+      for (const child of node.sortedChildren_) {
         childTailEdge = drawNode(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.bytesInOutput_ / totalBytes * sweepAngle, childFlags, childTailEdge)
         bytesSoFar += child.bytesInOutput_
         childFlags |= FLAGS.CHAIN
@@ -266,7 +266,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
       }
     }
 
-    let START_ANGLE = -Math.PI / 2
+    const START_ANGLE = -Math.PI / 2
     let width = 0
     let height = 0
     let centerX = 0
@@ -289,9 +289,9 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
     let animatedStartAngle = sourceStartAngle
     let animatedSweepAngle = sourceSweepAngle
 
-    let hitTestNode = (mouseEvent: MouseEvent): TreeNode | null => {
-      let visit = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode | null => {
-        let outerRadius = computeRadius(depth + 1)
+    const hitTestNode = (mouseEvent: MouseEvent): TreeNode | null => {
+      const visit = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode | null => {
+        const outerRadius = computeRadius(depth + 1)
         if (outerRadius > centerY) return null // Don't draw slices that fall outside the canvas bounds
 
         // Hit-test the current node
@@ -306,12 +306,12 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
           }
         }
 
-        let totalBytes = node.bytesInOutput_
+        const totalBytes = node.bytesInOutput_
         let bytesSoFar = 0
 
         // Hit-test the children
-        for (let child of node.sortedChildren_) {
-          let hit = visit(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.bytesInOutput_ / totalBytes * sweepAngle)
+        for (const child of node.sortedChildren_) {
+          const hit = visit(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.bytesInOutput_ / totalBytes * sweepAngle)
           if (hit) return hit
           bytesSoFar += child.bytesInOutput_
         }
@@ -333,7 +333,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
       return visit(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle)
     }
 
-    let tick = (): void => {
+    const tick = (): void => {
       let t = (now() - animationStart) / CONSTANTS.ANIMATION_DURATION
 
       if (t < 0 || t > 1) {
@@ -362,31 +362,31 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
       draw()
     }
 
-    let tooltipEl = document.createElement('div')
+    const tooltipEl = document.createElement('div')
 
-    let showTooltip = (x: number, y: number, html: string): void => {
+    const showTooltip = (x: number, y: number, html: string): void => {
       tooltipEl.style.display = 'block'
       tooltipEl.style.left = x + 'px'
       tooltipEl.style.top = y + 'px'
       tooltipEl.innerHTML = html
     }
 
-    let hideTooltip = (): void => {
+    const hideTooltip = (): void => {
       tooltipEl.style.display = 'none'
     }
 
     let previousHoveredNode: TreeNode | null = null
     let historyStack: TreeNode[] = []
 
-    let handleMouseMove = (e: MouseEvent): void => {
-      let node = hitTestNode(e)
+    const handleMouseMove = (e: MouseEvent): void => {
+      const node = hitTestNode(e)
       changeHoveredNode(node)
 
       // Show a tooltip for hovered nodes
       if (node && node !== animatedNode.parent_) {
         let tooltip = node.inputPath_
         if (node.parent_ && node.parent_.inputPath_ !== '') {
-          let i = node.parent_.inputPath_.length
+          const i = node.parent_.inputPath_.length
           tooltip = textToHTML(tooltip.slice(0, i)) + '<b>' + textToHTML(tooltip.slice(i)) + '</b>'
         } else {
           tooltip = '<b>' + textToHTML(shortenDataURLForDisplay(tooltip)) + '</b>'
@@ -464,7 +464,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
 
       // Animate from parent to child
       if (isParentOf(animatedNode, currentNode)) {
-        let slice: Slice = {
+        const slice: Slice = {
           depth_: animatedDepth,
           startAngle_: animatedStartAngle,
           sweepAngle_: animatedSweepAngle,
@@ -481,7 +481,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
 
       // Animate from child to parent
       else if (isParentOf(currentNode, animatedNode)) {
-        let slice: Slice = {
+        const slice: Slice = {
           depth_: 0,
           startAngle_: START_ANGLE,
           sweepAngle_: Math.PI * 2,
@@ -504,18 +504,18 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
     }]
   }
 
-  let startDetails = (): [() => void, () => void] => {
-    let detailsEl = document.createElement('div')
+  const startDetails = (): [() => void, () => void] => {
+    const detailsEl = document.createElement('div')
 
-    let regenerate = (): void => {
-      let parent = currentNode.parent_
-      let children = currentNode.sortedChildren_
-      let barsEl = document.createElement('div')
+    const regenerate = (): void => {
+      const parent = currentNode.parent_
+      const children = currentNode.sortedChildren_
+      const barsEl = document.createElement('div')
       let maxBytesInOutput = 1
       barsEl.className = styles.bars
 
-      for (let child of children) {
-        let bytesInOutput = child.bytesInOutput_
+      for (const child of children) {
+        const bytesInOutput = child.bytesInOutput_
         if (bytesInOutput > maxBytesInOutput) maxBytesInOutput = bytesInOutput
       }
 
@@ -524,16 +524,16 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
 
       // Provide a link to the parent directory
       if (parent) {
-        let rowEl = document.createElement('a')
+        const rowEl = document.createElement('a')
         rowEl.className = styles.row
         rowEl.tabIndex = 0
         barsEl.append(rowEl)
 
-        let nameEl = document.createElement('div')
+        const nameEl = document.createElement('div')
         nameEl.className = styles.name
         rowEl.append(nameEl)
 
-        let sizeEl = document.createElement('div')
+        const sizeEl = document.createElement('div')
         sizeEl.className = styles.size
         rowEl.append(sizeEl)
 
@@ -552,32 +552,32 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
         generatedRows.push(rowEl)
       }
 
-      for (let child of children) {
-        let name = child.inputPath_.slice(currentNode.inputPath_.length)
-        let size = bytesToText(child.bytesInOutput_)
+      for (const child of children) {
+        const name = child.inputPath_.slice(currentNode.inputPath_.length)
+        const size = bytesToText(child.bytesInOutput_)
 
-        let rowEl = document.createElement('a')
+        const rowEl = document.createElement('a')
         rowEl.className = styles.row
         rowEl.tabIndex = 0
         barsEl.append(rowEl)
 
-        let nameEl = document.createElement('div')
+        const nameEl = document.createElement('div')
         nameEl.className = styles.name
         nameEl.innerHTML = textToHTML(name === child.inputPath_ ? shortenDataURLForDisplay(name) : name)
         rowEl.append(nameEl)
 
-        let sizeEl = document.createElement('div')
+        const sizeEl = document.createElement('div')
         sizeEl.className = styles.size
         rowEl.append(sizeEl)
 
-        let barEl = document.createElement('div')
-        let bgColor = cssBackgroundForInputPath(child.inputPath_)
+        const barEl = document.createElement('div')
+        const bgColor = cssBackgroundForInputPath(child.inputPath_)
         barEl.className = styles.bar + (child.bytesInOutput_ ? '' : ' ' + styles.empty)
         barEl.style.background = bgColor
         barEl.style.width = 100 * child.bytesInOutput_ / maxBytesInOutput + '%'
         sizeEl.append(barEl)
 
-        let bytesEl = document.createElement('div')
+        const bytesEl = document.createElement('div')
         bytesEl.className = styles.last
         bytesEl.textContent = colorMode.value === COLOR.FORMAT ? moduleTypeLabelInputPath(child.inputPath_, '') : size
         barEl.append(bytesEl)
@@ -601,17 +601,17 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
         generatedRows.push(rowEl)
       }
 
-      let directoryEl = document.createElement('div')
+      const directoryEl = document.createElement('div')
       directoryEl.className = styles.dir
       directoryEl.textContent = 'Directory: '
 
-      let segmentsEl = document.createElement('div')
+      const segmentsEl = document.createElement('div')
       segmentsEl.className = styles.segments
       directoryEl.append(segmentsEl)
 
       for (let node: TreeNode | null = currentNode; node; node = node.parent_) {
         let text = node.inputPath_ || '/'
-        let nodeEl = document.createElement('a')
+        const nodeEl = document.createElement('a')
         if (node.parent_) text = text.slice(node.parent_.inputPath_.length)
         nodeEl.textContent = text
         if (node !== currentNode) {
@@ -667,7 +667,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
         }
 
         for (let node: TreeNode | null = hoveredNode; node; node = node.parent_) {
-          let index = generatedNodes.indexOf(node)
+          const index = generatedNodes.indexOf(node)
           if (index >= 0) {
             previousHoveredElement = generatedRows[index]
             previousHoveredElement.classList.add('hover')
