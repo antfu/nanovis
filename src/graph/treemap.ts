@@ -318,9 +318,11 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
       const [nameText, nameWidth] = textOverflowEllipsis(getText(node) || '', maxWidth)
       let textX = x + Math.round((w - nameWidth) / 2)
 
+      const text = getText(node)
+      const subtext = getSubtext(node)
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
-      if (nameText === getText(node) && node.children.length) {
-        let detailText = getSubtext(node) || ''
+      if (nameText === text && node.children.length) {
+        let detailText = subtext || ''
         if (detailText)
           detailText = ' - ' + detailText
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
@@ -335,9 +337,11 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
       if (h > CONSTANT_INSET_Y + 16 && !node.children.length) {
-        const [sizeText, sizeWidth] = textOverflowEllipsis(getSubtext(node) || '', maxWidth)
+        const [sizeText, sizeWidth] = textOverflowEllipsis(subtext || '', maxWidth)
         c.globalAlpha = 0.5
-        c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + CONSTANT_HEADER_HEIGHT + Math.round(h - CONSTANT_INSET_Y) / 2)
+        // Handle the case where title is empty
+        const headerHeight = text ? CONSTANT_HEADER_HEIGHT : (CONSTANT_HEADER_HEIGHT / 2 + CONSTANT_PADDING)
+        c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + headerHeight + Math.round(h - CONSTANT_INSET_Y) / 2)
         c.globalAlpha = 1
       }
 
