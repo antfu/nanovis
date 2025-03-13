@@ -34,7 +34,7 @@ function isParentOf(parent: TreeNode, child: TreeNode | null): boolean {
   while (child) {
     if (child === parent)
       return true
-    child = child.parent_
+    child = child.parent
   }
   return false
 }
@@ -49,18 +49,18 @@ function narrowSlice(root: TreeNode, node: TreeNode, slice: Slice): void {
   if (root === node)
     return
 
-  const parent = node.parent_!
-  const totalBytes = parent.bytesInOutput_ || 1 // Don't divide by 0
+  const parent = node.parent!
+  const totalBytes = parent.size || 1 // Don't divide by 0
   let bytesSoFar = 0
   narrowSlice(root, parent, slice)
 
-  for (const child of parent.sortedChildren_) {
+  for (const child of parent.children) {
     if (child === node) {
       slice.startAngle_ += slice.sweepAngle_ * bytesSoFar / totalBytes
-      slice.sweepAngle_ = child.bytesInOutput_ / totalBytes * slice.sweepAngle_
+      slice.sweepAngle_ = child.size / totalBytes * slice.sweepAngle_
       break
     }
-    bytesSoFar += child.bytesInOutput_
+    bytesSoFar += child.size
   }
 
   slice.depth_ += 1
@@ -81,10 +81,10 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     colorMode = COLOR.DIRECTORY,
   } = options || {}
 
-  while (tree.root_.sortedChildren_.length === 1) {
+  while (tree.root.children.length === 1) {
     tree = {
-      root_: tree.root_.sortedChildren_[0],
-      maxDepth_: tree.maxDepth_ - 1,
+      root: tree.root.children[0],
+      maxDepth: tree.maxDepth - 1,
     }
   }
 
@@ -92,7 +92,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
   const disposables: (() => void)[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
-  let currentNode = tree.root_
+  let currentNode = tree.root
   let hoveredNode: TreeNode | null = null
 
   const changeCurrentNode = (node: TreeNode, e: MouseEvent): void => {
@@ -118,7 +118,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     const c = canvas.getContext('2d')!
 
     const resize = (): void => {
-      const maxRadius = 2 * Math.ceil(computeRadius(tree.maxDepth_))
+      const maxRadius = 2 * Math.ceil(computeRadius(tree.maxDepth))
       const ratio = window.devicePixelRatio || 1
       width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
       height = width
@@ -155,12 +155,12 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
 
       // Handle the fill
       if (flags & FLAGS.FILL) {
-        c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.inputPath_, centerX, centerY, 1)
+        c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.id, centerX, centerY, 1)
         c.beginPath()
         c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
         c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
         c.fill()
-        if (hoveredNode && (flags & FLAGS.HOVER || node.parent_ === hoveredNode)) {
+        if (hoveredNode && (flags & FLAGS.HOVER || node.parent === hoveredNode)) {
           c.fillStyle = 'rgba(255, 255, 255, 0.3)'
           c.fill()
         }
@@ -178,14 +178,14 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
           c.lineTo(centerX + innerRadius * Math.cos(startAngle + clampedSweepAngle), centerY + innerRadius * Math.sin(startAngle + clampedSweepAngle))
       }
 
-      const totalBytes = node.bytesInOutput_
+      const totalBytes = node.size
       let childFlags = flags & (FLAGS.FILL | FLAGS.HOVER)
       let bytesSoFar = 0
       let childTailEdge = -Infinity
 
-      for (const child of node.sortedChildren_) {
-        childTailEdge = drawNode(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.bytesInOutput_ / totalBytes * sweepAngle, childFlags, childTailEdge)
-        bytesSoFar += child.bytesInOutput_
+      for (const child of node.children) {
+        childTailEdge = drawNode(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.size / totalBytes * sweepAngle, childFlags, childTailEdge)
+        bytesSoFar += child.size
         childFlags |= FLAGS.CHAIN
       }
 
@@ -210,7 +210,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
         c.font = 'bold 16px sans-serif'
         c.textAlign = 'center'
         c.textBaseline = 'middle'
-        c.fillText(bytesToText(targetNode.bytesInOutput_), centerX, centerY)
+        c.fillText(bytesToText(targetNode.size), centerX, centerY)
       }
     }
 
@@ -251,20 +251,20 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
           deltaAngle *= Math.PI * 2
           if (deltaAngle < sweepAngle) {
             if (node === animatedNode)
-              return node.parent_
+              return node.parent
             return node
           }
         }
 
-        const totalBytes = node.bytesInOutput_
+        const totalBytes = node.size
         let bytesSoFar = 0
 
         // Hit-test the children
-        for (const child of node.sortedChildren_) {
-          const hit = visit(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.bytesInOutput_ / totalBytes * sweepAngle)
+        for (const child of node.children) {
+          const hit = visit(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.size / totalBytes * sweepAngle)
           if (hit)
             return hit
-          bytesSoFar += child.bytesInOutput_
+          bytesSoFar += child.size
         }
 
         return null
@@ -323,7 +323,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       changeHoveredNode(node)
 
       // Show a tooltip for hovered nodes
-      if (node && node !== animatedNode.parent_) {
+      if (node && node !== animatedNode.parent) {
         events.emit('hover', node, e)
         canvas.style.cursor = 'pointer'
       }
@@ -356,7 +356,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       let stack: TreeNode[] = []
 
       // Handle clicking in the middle node
-      if (node !== animatedNode.parent_) {
+      if (node !== animatedNode.parent) {
         stack = historyStack.concat(currentNode)
       }
       else if (historyStack.length > 0) {
@@ -364,7 +364,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
         stack = historyStack.slice()
       }
 
-      if (node.sortedChildren_.length > 0) {
+      if (node.children.length > 0) {
         changeCurrentNode(node, e)
         historyStack = stack
       }
@@ -443,14 +443,14 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     const detailsEl = document.createElement('div')
 
     const regenerate = (): void => {
-      const parent = currentNode.parent_
-      const children = currentNode.sortedChildren_
+      const parent = currentNode.parent
+      const children = currentNode.children
       const barsEl = document.createElement('div')
       let maxBytesInOutput = 1
       barsEl.className = styles.bars
 
       for (const child of children) {
-        const bytesInOutput = child.bytesInOutput_
+        const bytesInOutput = child.size
         if (bytesInOutput > maxBytesInOutput)
           maxBytesInOutput = bytesInOutput
       }
@@ -489,8 +489,8 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       }
 
       for (const child of children) {
-        const name = child.inputPath_.slice(currentNode.inputPath_.length)
-        const size = bytesToText(child.bytesInOutput_)
+        const name = child.id.slice(currentNode.id.length)
+        const size = bytesToText(child.size)
 
         const rowEl = document.createElement('a')
         rowEl.className = styles.row
@@ -499,7 +499,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
 
         const nameEl = document.createElement('div')
         nameEl.className = styles.name
-        nameEl.innerHTML = textToHTML(name === child.inputPath_ ? shortenDataURLForDisplay(name) : name)
+        nameEl.innerHTML = textToHTML(name === child.id ? shortenDataURLForDisplay(name) : name)
         rowEl.append(nameEl)
 
         const sizeEl = document.createElement('div')
@@ -507,22 +507,22 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
         rowEl.append(sizeEl)
 
         const barEl = document.createElement('div')
-        const bgColor = cssBackgroundForInputPath(colorMapping, child.inputPath_)
-        barEl.className = styles.bar + (child.bytesInOutput_ ? '' : ' ' + styles.empty)
+        const bgColor = cssBackgroundForInputPath(colorMapping, child.id)
+        barEl.className = styles.bar + (child.size ? '' : ' ' + styles.empty)
         barEl.style.background = bgColor
-        barEl.style.width = 100 * child.bytesInOutput_ / maxBytesInOutput + '%'
+        barEl.style.width = 100 * child.size / maxBytesInOutput + '%'
         sizeEl.append(barEl)
 
         const bytesEl = document.createElement('div')
         bytesEl.className = styles.last
-        bytesEl.textContent = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, child.inputPath_, '') : size
+        bytesEl.textContent = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, child.id, '') : size
         barEl.append(bytesEl)
 
         // Use a link so we get keyboard support
         rowEl.href = 'javascript:void 0'
         rowEl.onclick = (e) => {
           e.preventDefault() // Prevent meta+click from opening a new tab
-          if (child.sortedChildren_.length > 0) {
+          if (child.children.length > 0) {
             changeCurrentNode(child, e)
             if (lastInteractionWasKeyboard && generatedRows.length > 0) {
               generatedRows[0].focus()
@@ -546,11 +546,11 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       segmentsEl.className = styles.segments
       directoryEl.append(segmentsEl)
 
-      for (let node: TreeNode | null = currentNode; node; node = node.parent_) {
-        let text = node.inputPath_ || '/'
+      for (let node: TreeNode | null = currentNode; node; node = node.parent) {
+        let text = node.id || '/'
         const nodeEl = document.createElement('a')
-        if (node.parent_)
-          text = text.slice(node.parent_.inputPath_.length)
+        if (node.parent)
+          text = text.slice(node.parent.id.length)
         nodeEl.textContent = text
         if (node !== currentNode) {
           nodeEl.href = 'javascript:void 0'
@@ -569,7 +569,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
         // up to the top level, focus this top-level element. We don't want
         // to focus the first row because then enter will re-descend down the
         // tree. But use a tab index of -1 so this never gets focus naturally.
-        if (currentNode == tree.root_) {
+        if (currentNode == tree.root) {
           nodeEl.tabIndex = -1
           generatedNodes.unshift(currentNode)
           generatedRows.unshift(nodeEl)
@@ -604,7 +604,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
           previousHoveredElement = null
         }
 
-        for (let node: TreeNode | null = hoveredNode; node; node = node.parent_) {
+        for (let node: TreeNode | null = hoveredNode; node; node = node.parent) {
           const index = generatedNodes.indexOf(node)
           if (index >= 0) {
             previousHoveredElement = generatedRows[index]

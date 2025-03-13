@@ -44,7 +44,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
   const events = createNanoEvents<Events>()
   const disposables: (() => void)[] = []
-  const totalBytes = tree.root_.bytesInOutput_
+  const totalBytes = tree.root.size
   let viewportMin = 0
   let viewportMax = totalBytes
   const componentEl = document.createElement('div')
@@ -69,7 +69,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
   const changeHoveredNode = (node: TreeNode | null, e: MouseEvent): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
-      canvas.style.cursor = node && !node.sortedChildren_.length ? 'pointer' : 'auto'
+      canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
       if (!node) {
         events.emit('hover', null, e)
       }
@@ -89,7 +89,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
   const resize = (): void => {
     const ratio = window.devicePixelRatio || 1
     width = componentEl.clientWidth + 2 * CONSTANTS.MARGIN
-    height = tree.maxDepth_ * CONSTANTS.ROW_HEIGHT + 1
+    height = tree.maxDepth * CONSTANTS.ROW_HEIGHT + 1
     zoomedOutMin = (width - CONSTANTS.ZOOMED_OUT_WIDTH) >> 1
     zoomedOutWidth = zoomedOutMin + CONSTANTS.ZOOMED_OUT_WIDTH
     if (zoomedOutMin < 0)
@@ -127,7 +127,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
   const drawNode = (node: TreeNode, y: number, startBytes: number, prevRightEdge: number, flags: FLAGS): number => {
     const scale = zoomedOutWidth / (viewportMax - viewportMin)
     const x = zoomedOutMin + (startBytes - viewportMin) * scale
-    const w = node.bytesInOutput_ * scale
+    const w = node.size * scale
     const rightEdge = x + w
     if (rightEdge < prevRightEdge + 1.5)
       return prevRightEdge
@@ -142,8 +142,8 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     let measuredW: number
     let typesetX = 0
     const typesetW = w + x - textX
-    const fillColor = node.inputPath_
-      ? canvasFillStyleForInputPath(colorMapping, c, node.inputPath_, zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
+    const fillColor = node.id
+      ? canvasFillStyleForInputPath(colorMapping, c, node.id, zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
       : otherColor
     let textColor = 'black'
     let childRightEdge = -Infinity
@@ -159,7 +159,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
       c.fillRect(x, y, rectWidth, CONSTANTS.ROW_HEIGHT)
 
       // Draw the hover highlight
-      if ((flags & FLAGS.HOVER) || (hoveredNode && node.inputPath_ === hoveredNode.inputPath_)) {
+      if ((flags & FLAGS.HOVER) || (hoveredNode && node.id === hoveredNode.id)) {
         c.fillStyle = 'rgba(255, 255, 255, 0.3)'
         c.fillRect(x, y, rectWidth, CONSTANTS.ROW_HEIGHT)
         flags |= FLAGS.HOVER
@@ -168,7 +168,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
     // Typeset the node name
     if (ellipsisWidth < typesetW) {
-      nameText = node.name_
+      nameText = node.text
       measuredW = c.measureText(nameText).width
       if (measuredW <= typesetW) {
         typesetX += measuredW
@@ -190,7 +190,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
     // Typeset the node size
     if (typesetX + ellipsisWidth < typesetW) {
-      sizeText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – ') : node.sizeText_
+      sizeText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.id, ' – ') : node.subtext
       measuredW = c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
         sizeText = textOverflowEllipsis(sizeText, typesetW - typesetX)
@@ -201,9 +201,9 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     }
 
     // Draw the children
-    for (const child of node.sortedChildren_) {
+    for (const child of node.children) {
       childRightEdge = drawNode(child, y + CONSTANTS.ROW_HEIGHT, startBytes, childRightEdge, flags & ~FLAGS.OUTPUT)
-      startBytes += child.bytesInOutput_
+      startBytes += child.size
     }
 
     // Draw the outline
@@ -225,9 +225,9 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     c.clearRect(0, 0, width, height)
     c.textBaseline = 'middle'
 
-    for (const child of tree.root_.sortedChildren_) {
+    for (const child of tree.root.children) {
       rightEdge = drawNode(child, 0, startBytes, rightEdge, FLAGS.OUTPUT)
-      startBytes += child.bytesInOutput_
+      startBytes += child.size
     }
   }
 
@@ -238,17 +238,17 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
   const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): TreeNode | null => {
     const visit = (node: TreeNode, y: number, startBytes: number): TreeNode | null => {
-      if (mouseBytes >= startBytes && mouseBytes < startBytes + node.bytesInOutput_) {
-        if (mouseY >= y && mouseY < y + CONSTANTS.ROW_HEIGHT && node.inputPath_) {
+      if (mouseBytes >= startBytes && mouseBytes < startBytes + node.size) {
+        if (mouseY >= y && mouseY < y + CONSTANTS.ROW_HEIGHT && node.id) {
           return node
         }
 
         if (mouseY >= y + CONSTANTS.ROW_HEIGHT) {
-          for (const child of node.sortedChildren_) {
+          for (const child of node.children) {
             const result = visit(child, y + CONSTANTS.ROW_HEIGHT, startBytes)
             if (result)
               return result
-            startBytes += child.bytesInOutput_
+            startBytes += child.size
           }
         }
       }
@@ -265,11 +265,11 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     let mouseBytes = viewportMin + (viewportMax - viewportMin) / zoomedOutWidth * (mouseX - zoomedOutMin)
     let startBytes = 0
 
-    for (const child of tree.root_.sortedChildren_) {
+    for (const child of tree.root.children) {
       const result = visit(child, 0, startBytes)
       if (result)
         return result
-      startBytes += child.bytesInOutput_
+      startBytes += child.size
     }
 
     return null
@@ -361,7 +361,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     const node = hitTestNode(e)
     changeHoveredNode(node, e)
 
-    if (node && !node.sortedChildren_.length) {
+    if (node && !node.children.length) {
       events.emit('click', node, e)
     }
   }

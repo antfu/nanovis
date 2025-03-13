@@ -48,8 +48,8 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
   const children: NodeLayout[] = []
 
   const worst = (start: number, end: number, shortestSide: number, totalArea: number, bytesToArea: number): number => {
-    const maxArea = sortedChildren[start].bytesInOutput_ * bytesToArea
-    const minArea = sortedChildren[end].bytesInOutput_ * bytesToArea
+    const maxArea = sortedChildren[start].size * bytesToArea
+    const minArea = sortedChildren[end].size * bytesToArea
     return Math.max(
       (shortestSide * shortestSide * maxArea) / (totalArea * totalArea),
       totalArea * totalArea / (shortestSide * shortestSide * minArea),
@@ -60,7 +60,7 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
     while (start < sortedChildren.length) {
       let totalBytes = 0
       for (let i = start; i < sortedChildren.length; i++) {
-        totalBytes += sortedChildren[i].bytesInOutput_
+        totalBytes += sortedChildren[i].size
       }
 
       const shortestSide = Math.min(w, h)
@@ -71,7 +71,7 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
 
       // Find the optimal split
       while (end < sortedChildren.length) {
-        const area = sortedChildren[end].bytesInOutput_ * bytesToArea
+        const area = sortedChildren[end].size * bytesToArea
         const newWorst = worst(start, end, shortestSide, areaInRun + area, bytesToArea)
         if (end > start && oldWorst < newWorst)
           break
@@ -85,7 +85,7 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
       let areaInLayout = 0
       for (let i = start; i < end; i++) {
         const child = sortedChildren[i]
-        const area = child.bytesInOutput_ * bytesToArea
+        const area = child.size * bytesToArea
         const lower = Math.round(shortestSide * areaInLayout / areaInRun)
         const upper = Math.round(shortestSide * (areaInLayout + area) / areaInRun)
         const [cx, cy, cw, ch] = w >= h
@@ -96,7 +96,7 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
           box_: [cx, cy, cw, ch],
           children_: cw > CONSTANTS.INSET_X && ch > CONSTANTS.INSET_Y
             ? layoutTreemap(
-                child.sortedChildren_,
+                child.children,
                 cx + CONSTANTS.PADDING,
                 cy + CONSTANTS.HEADER_HEIGHT,
                 cw - CONSTANTS.INSET_X,
@@ -202,7 +202,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
     canvas.height = Math.round(height * ratio)
     c.scale(ratio, ratio)
     if (width !== oldWidth || height !== oldHeight) {
-      layoutNodes = layoutTreemap(tree.root_.sortedChildren_, 0, 0, width - 1, height - 1)
+      layoutNodes = layoutTreemap(tree.root.children, 0, 0, width - 1, height - 1)
       updateCurrentLayout()
     }
     draw()
@@ -282,8 +282,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       flags |= drawNodeBackground(child, culling)
     }
 
-    if (culling !== Culling.Culled && !node.isOutputFile_) {
-      c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.inputPath_, bgOriginX, bgOriginY, 1)
+    if (culling !== Culling.Culled && !node.isOutput) {
+      c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.id, bgOriginX, bgOriginY, 1)
       if (layout.children_.length) {
         // Avoiding overdraw is probably a good idea...
         c.fillRect(x, y, w, CONSTANTS.HEADER_HEIGHT)
@@ -303,7 +303,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   const drawNodeForeground = (layout: NodeLayout, inCurrentNode: boolean): void => {
     const node = layout.node_
     const [x, y, w, h] = layout.box_
-    const isOutputFile = node.isOutputFile_
+    const isOutputFile = node.isOutput
 
     // Draw the hover highlight
     if (hoveredNode === node && !isOutputFile && (!currentNode || inCurrentNode)) {
@@ -329,7 +329,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       // Measure the node name
       const maxWidth = w - CONSTANTS.INSET_X
       const textY = y + Math.round(CONSTANTS.INSET_Y / 2)
-      const [nameText, nameWidth] = textOverflowEllipsis(node.name_, maxWidth)
+      const [nameText, nameWidth] = textOverflowEllipsis(node.text, maxWidth)
       let textX = x + Math.round((w - nameWidth) / 2)
 
       // Switch to the normal font
@@ -340,8 +340,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       }
 
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
-      if (nameText === node.name_ && node.sortedChildren_.length) {
-        const detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.inputPath_, '') : node.sizeText_)
+      if (nameText === node.text && node.children.length) {
+        const detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.id, '') : node.subtext)
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
         c.globalAlpha = 0.5
@@ -367,8 +367,8 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
       }
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
-      if (h > CONSTANTS.INSET_Y + 16 && !node.sortedChildren_.length) {
-        const detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.inputPath_, '') : node.sizeText_
+      if (h > CONSTANTS.INSET_Y + 16 && !node.children.length) {
+        const detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.id, '') : node.subtext
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth)
         c.globalAlpha = 0.5
         c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + CONSTANTS.HEADER_HEIGHT + Math.round(h - CONSTANTS.INSET_Y) / 2)
@@ -478,7 +478,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   let changeHoveredNode = (node: TreeNode | null): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
-      canvas.style.cursor = node && !node.sortedChildren_.length ? 'pointer' : 'auto'
+      canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
       invalidate()
     }
   }
@@ -517,7 +517,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
     const layout = hitTestNode(e)
     if (layout) {
       const node = layout.node_
-      if (!node.sortedChildren_.length) {
+      if (!node.children.length) {
         events.emit('click', node, e)
         updateHover(e)
       }

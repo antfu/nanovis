@@ -132,7 +132,7 @@ export function getColorMapping(metafile: Metafile, color: COLOR): ColorMapping 
   const colorMapping: ColorMapping = {}
 
   const outputs = metafile.outputs
-  const root = { name_: '', inputPath_: '', bytesInOutput_: 0, children_: {} }
+  const root: TreeNodeInProgress = { text: '', id: '', size: 0, childrenMap: {} }
 
   // For each output file
   for (const o in outputs) {
@@ -164,18 +164,18 @@ function assignColorsByDirectory(
   startAngle: number,
   sweepAngle: number,
 ): void {
-  const totalBytes = node.bytesInOutput_
-  const children = node.children_
+  const totalBytes = node.size
+  const children = node.childrenMap
   const sorted: TreeNodeInProgress[] = []
 
-  colorMapping[node.inputPath_] = hueAngleToColor(startAngle + sweepAngle / 2)
+  colorMapping[node.id] = hueAngleToColor(startAngle + sweepAngle / 2)
 
   for (const file in children) {
     sorted.push(children[file])
   }
 
   for (const child of sorted.sort(orderChildrenBySize)) {
-    const childSweepAngle = child.bytesInOutput_ / totalBytes * sweepAngle
+    const childSweepAngle = child.size / totalBytes * sweepAngle
     assignColorsByDirectory(colorMapping, child, startAngle, childSweepAngle)
     startAngle += childSweepAngle
   }
@@ -212,7 +212,7 @@ export function moduleTypeLabelInputPath(
 }
 
 function assignColorsByFormat(colorMapping: ColorMapping, node: TreeNodeInProgress, metafile: Metafile): FORMATS {
-  const children = node.children_
+  const children = node.childrenMap
   let formats: FORMATS | 0 = 0
   let hasChild = false
 
@@ -222,11 +222,11 @@ function assignColorsByFormat(colorMapping: ColorMapping, node: TreeNodeInProgre
   }
 
   if (!hasChild) {
-    const input = metafile.inputs[node.inputPath_]
+    const input = metafile.inputs[node.id]
     const format = input && input.format
     formats = format === 'esm' ? FORMATS.ESM : format === 'cjs' ? FORMATS.CJS : 0
   }
 
-  colorMapping[node.inputPath_] = colorForFormats(formats)
+  colorMapping[node.id] = colorForFormats(formats)
   return formats
 }

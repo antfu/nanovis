@@ -1,11 +1,11 @@
 export interface TreeNode {
-  name_: string
-  inputPath_: string
-  sizeText_: string
-  bytesInOutput_: number
-  sortedChildren_: TreeNode[]
-  isOutputFile_: boolean
-  parent_: TreeNode | null
+  text: string
+  id: string
+  subtext: string
+  size: number
+  children: TreeNode[]
+  parent: TreeNode | null
+  isOutput: boolean
 }
 
 export interface Events {
@@ -14,6 +14,6 @@ export interface Events {
 }
 
 export interface Tree {
-  root_: TreeNode
-  maxDepth_: number
+  root: TreeNode
+  maxDepth: number
 }
