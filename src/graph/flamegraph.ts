@@ -1,18 +1,14 @@
-import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
-import { createNanoEvents } from 'nanoevents'
-import {
-  colorToCanvasFill,
-} from '../utils/color'
-import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
+import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import { colorToCanvasFill } from '../utils/color'
 import {
   now,
   strokeRectWithFirefoxBugWorkaround,
-  useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
+import { createGraphContext } from './context'
 
-const CONSTANT_MARGIN = 50
+// const CONSTANT_MARGIN = 50
 const CONSTANT_ROW_HEIGHT = 24
 const CONSTANT_TEXT_INDENT = 5
 const CONSTANT_DOT_CHAR_CODE = 46
@@ -32,22 +28,17 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
     getColor,
     getText,
     getSubtext,
-  } = {
-    ...DEFAULT_GRAPH_OPTIONS,
-    ...options,
-  }
+    events,
+    disposables,
+    dispose,
+    el,
+    palette,
+  } = createGraphContext(tree, options)
 
-  const events = createNanoEvents<Events<T>>()
-  if (options.onClick)
-    events.on('click', options.onClick)
-  if (options.onHover)
-    events.on('hover', options.onHover)
-
-  const disposables: (() => void)[] = []
   const totalBytes = tree.root.size
   let viewportMin = 0
   let viewportMax = totalBytes
-  const componentEl = document.createElement('div')
+
   const mainEl = document.createElement('div')
   const canvas = document.createElement('canvas')
 
@@ -56,7 +47,7 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
   })
   Object.assign(canvas.style, {
     position: 'absolute',
-    left: (-CONSTANT_MARGIN) + 'px',
+    left: '0',
     top: '0',
   })
 
@@ -70,7 +61,6 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
   let stripeScaleAdjust = 1
   let animationFrame: number | null = null
   let hoveredNode: TreeNode<T> | null = null
-  let fgOnColor = ''
   const normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
   const boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
   let ellipsisWidth = 0
@@ -98,7 +88,7 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
 
   const resize = (): void => {
     const ratio = window.devicePixelRatio || 1
-    width = componentEl.clientWidth + 2 * CONSTANT_MARGIN
+    width = el.clientWidth
     height = tree.maxDepth * CONSTANT_ROW_HEIGHT + 1
     zoomedOutMin = (width - CONSTANT_ZOOMED_OUT_WIDTH) >> 1
     zoomedOutWidth = zoomedOutMin + CONSTANT_ZOOMED_OUT_WIDTH
@@ -152,12 +142,12 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
     let measuredW: number
     let typesetX = 0
     const typesetW = w + x - textX
-    const fillColor = colorToCanvasFill(getColor(node), c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
-    let textColor = 'black'
+    const fillColor = colorToCanvasFill(getColor(node) || palette.fallback, c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
+    let textColor = palette.text
     let childRightEdge = -Infinity
 
     if (flags & FLAGS.OUTPUT) {
-      textColor = fgOnColor
+      textColor = palette.fg
       c.font = boldFont
       currentWidthCache = boldWidthCache
       ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
@@ -168,7 +158,7 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
 
       // Draw the hover highlight
       if ((flags & FLAGS.HOVER) || (hoveredNode && node.id === hoveredNode.id)) {
-        c.fillStyle = 'rgba(255, 255, 255, 0.3)'
+        c.fillStyle = palette.hover
         c.fillRect(x, y, rectWidth, CONSTANT_ROW_HEIGHT)
         flags |= FLAGS.HOVER
       }
@@ -219,19 +209,17 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
     // Draw the outline
     if (!(flags & FLAGS.OUTPUT)) {
       // Note: The stroke deliberately overlaps the right and bottom edges
-      strokeRectWithFirefoxBugWorkaround(c, '#222', x + 0.5, y + 0.5, rectWidth, CONSTANT_ROW_HEIGHT)
+      strokeRectWithFirefoxBugWorkaround(c, palette.stroke, x + 0.5, y + 0.5, rectWidth, CONSTANT_ROW_HEIGHT)
     }
 
     return rightEdge
   }
 
   let draw = (): void => {
-    const bodyStyle = getComputedStyle(document.body)
     let startBytes = 0
     let rightEdge = -Infinity
 
     animationFrame = null
-    fgOnColor = bodyStyle.getPropertyValue('--fg-on')
     c.clearRect(0, 0, width, height)
     c.textBaseline = 'middle'
 
@@ -401,20 +389,13 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
 
-  disposables.push(useDarkModeListener(draw))
   disposables.push(useResizeEventListener(resize))
 
-  function dispose() {
-    disposables.forEach(d => d())
-    disposables.length = 0
-  }
-
-  // componentEl.id = styles.flamePanel
   mainEl.append(canvas)
-  componentEl.append(mainEl)
+  el.append(mainEl)
 
   return {
-    el: componentEl,
+    el,
     events,
     draw,
     resize,

@@ -1,5 +1,5 @@
 import type { Emitter } from 'nanoevents'
-import type { ColorValue } from './color'
+import type { ColorValue, Palette } from './color'
 
 export interface TreeNode<T> {
   id: string
@@ -16,6 +16,7 @@ export interface TreeNode<T> {
 export interface Events<T> {
   hover: (node: TreeNode<T> | null, e?: MouseEvent) => void
   click: (node: TreeNode<T>, e: MouseEvent) => void
+  leave: (e?: MouseEvent) => void
 }
 
 export interface Tree<T> {
@@ -27,9 +28,11 @@ export interface GraphBaseOptions<T> {
   getColor?: (node: TreeNode<T>) => ColorValue | undefined
   getText?: (node: TreeNode<T>) => string | undefined
   getSubtext?: (node: TreeNode<T>) => string | undefined
+  palette?: Partial<Palette>
 
   onHover?: Events<T>['hover']
   onClick?: Events<T>['click']
+  onLeave?: Events<T>['leave']
 }
 
 export interface GraphBase<T> {

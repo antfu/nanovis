@@ -1,16 +1,12 @@
-import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
-import { createNanoEvents } from 'nanoevents'
-import {
-  colorToCanvasFill,
-} from '../utils/color'
-import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
+import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import { colorToCanvasFill } from '../utils/color'
 import {
   bytesToText,
   now,
-  useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
+import { createGraphContext } from './context'
 
 const CONSTANT_ANIMATION_DURATION = 350
 
@@ -68,18 +64,12 @@ export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
 export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<T> = {}) {
   const {
     getColor,
-    // getText,
-    // getSubtext,
-  } = {
-    ...DEFAULT_GRAPH_OPTIONS,
-    ...options,
-  }
-
-  const events = createNanoEvents<Events<T>>()
-  if (options.onClick)
-    events.on('click', options.onClick)
-  if (options.onHover)
-    events.on('hover', options.onHover)
+    events,
+    disposables,
+    dispose,
+    el,
+    palette,
+  } = createGraphContext(tree, options)
 
   while (tree.root.children.length === 1) {
     tree = {
@@ -87,8 +77,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
       maxDepth: tree.maxDepth - 1,
     }
   }
-  const disposables: (() => void)[] = []
-  const componentEl = document.createElement('div')
+
   let currentNode = tree.root
   let hoveredNode: TreeNode<T> | null = null
 
@@ -148,13 +137,13 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
 
     // Handle the fill
     if (flags & FLAGS.FILL) {
-      c.fillStyle = colorToCanvasFill(getColor(node), c, centerX, centerY, 1)
+      c.fillStyle = colorToCanvasFill(getColor(node) || palette.fallback, c, centerX, centerY, 1)
       c.beginPath()
       c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
       c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
       c.fill()
       if (hoveredNode && (flags & FLAGS.HOVER || node.parent === hoveredNode)) {
-        c.fillStyle = 'rgba(255, 255, 255, 0.3)'
+        c.fillStyle = palette.hover
         c.fill()
       }
     }
@@ -192,14 +181,14 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     drawNode(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
 
     // Draw the stroke second
-    c.strokeStyle = '#222'
+    c.strokeStyle = palette.stroke
     c.beginPath()
     drawNode(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle, FLAGS.ROOT, -Infinity)
     c.stroke()
 
     // Draw the size of the current node in the middle
     if (animatedDepth === 0) {
-      c.fillStyle = '#222'
+      c.fillStyle = palette.stroke
       c.font = 'bold 16px sans-serif'
       c.textAlign = 'center'
       c.textBaseline = 'middle'
@@ -325,7 +314,6 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   }
 
   resize()
-  disposables.push(useDarkModeListener(draw))
   disposables.push(useResizeEventListener(resize))
   disposables.push(useWheelEventListener(handleMouseMove))
 
@@ -425,15 +413,10 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     targetNode = currentNode
   }
 
-  function dispose() {
-    disposables.forEach(d => d())
-    disposables.length = 0
-  }
-
-  componentEl.append(canvas)
+  el.append(canvas)
 
   return {
-    el: componentEl,
+    el,
     events,
     draw,
     resize,

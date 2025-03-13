@@ -18,16 +18,26 @@ function onClick(_node: TreeNode<any>) {
   selected.value = null
 }
 function onHover(node: TreeNode<any> | null) {
-  selected.value = node
+  if (node)
+    selected.value = node
+}
+function onLeave() {
+  selected.value = null
+}
+const optsions = {
+  getColor,
+  onClick,
+  onHover,
+  onLeave,
 }
 const el = useTemplateRef('el')
 
 onMounted(() => {
-  const treemap = createTreemap(tree, { getColor, onClick, onHover })
+  const treemap = createTreemap(tree, optsions)
   el.value!.appendChild(treemap.el)
-  const flamegraph = createFlamegraph(tree, { getColor, onClick, onHover })
+  const flamegraph = createFlamegraph(tree, optsions)
   el.value!.appendChild(flamegraph.el)
-  const sunburst = createSunburst(tree, { getColor, onClick, onHover })
+  const sunburst = createSunburst(tree, optsions)
   el.value!.appendChild(sunburst.el)
 
   onUnmounted(() => {

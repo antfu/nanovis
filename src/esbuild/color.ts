@@ -1,7 +1,7 @@
 import type { ColorMapPlain, ColorValue } from '../types/color'
 import type { Tree, TreeNode } from '../types/tree'
 import type { Metafile } from './metafile'
-import { COLOR_FALLBACK, createColorGetterFromMap, hueAngleToColor } from '../utils/color'
+import { createColorGetterFromMap, hueAngleToColor } from '../utils/color'
 
 // eslint-disable-next-line no-restricted-syntax
 const enum FORMATS {
@@ -13,9 +13,9 @@ const COLOR_CJS = hueAngleToColor(3.5)
 const COLOR_ESM = hueAngleToColor(1)
 const COLOR_BOTH = [COLOR_CJS, COLOR_ESM] as const
 
-function colorForFormats(formats: FORMATS): ColorValue {
+function colorForFormats(formats: FORMATS): ColorValue | undefined {
   if (!formats)
-    return COLOR_FALLBACK
+    return undefined
   if (formats === FORMATS.CJS)
     return COLOR_CJS
   if (formats === FORMATS.ESM)
@@ -27,8 +27,7 @@ export function moduleTypeLabelInputPath(
   color: ColorValue | undefined,
   prefix: string,
 ): string {
-  color ||= COLOR_FALLBACK
-  if (color === COLOR_FALLBACK)
+  if (!color)
     return ''
   if (color === COLOR_ESM)
     return prefix + 'ESM'

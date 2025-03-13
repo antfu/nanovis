@@ -1,5 +1,4 @@
 .:
-  COLOR_FALLBACK: string
   colorToCanvasFill: function
   colorToCssBackground: function
   createColorGetterFromMap: function

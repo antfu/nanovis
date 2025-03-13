@@ -57,7 +57,6 @@ export function strokeRectWithFirefoxBugWorkaround(c: CanvasRenderingContext2D, 
   c.strokeRect(x, y, w, h)
 }
 
-let darkMode: MediaQueryList | undefined
 export function useWheelEventListener(listener: ((e: WheelEvent) => void)) {
   window.addEventListener('wheel', listener, { passive: false })
   return () => window.removeEventListener('wheel', listener)
@@ -65,11 +64,6 @@ export function useWheelEventListener(listener: ((e: WheelEvent) => void)) {
 export function useResizeEventListener(listener: () => void) {
   window.addEventListener('resize', listener)
   return () => window.removeEventListener('resize', listener)
-}
-export function useDarkModeListener(listener: () => void) {
-  darkMode ||= matchMedia('(prefers-color-scheme: dark)')
-  darkMode.addEventListener('change', listener)
-  return () => darkMode!.removeEventListener('change', listener)
 }
 
 // Handle the case where this API doesn't exist

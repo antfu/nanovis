@@ -1,17 +1,15 @@
 /* eslint-disable no-restricted-syntax */
-import type { Events, GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
-import { createNanoEvents } from 'nanoevents'
+import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import {
   colorToCanvasFill,
 } from '../utils/color'
-import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
   now,
   strokeRectWithFirefoxBugWorkaround,
-  useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
+import { createGraphContext } from './context'
 
 const CONSTANT_PADDING = 4
 const CONSTANT_HEADER_HEIGHT = 20
@@ -126,20 +124,14 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     getColor,
     getText,
     getSubtext,
-  } = {
-    ...DEFAULT_GRAPH_OPTIONS,
-    ...options,
-  }
+    el,
+    events,
+    disposables,
+    palette,
+    dispose,
+  } = createGraphContext(tree, options)
 
-  const events = createNanoEvents<Events<T>>()
-  if (options.onClick)
-    events.on('click', options.onClick)
-  if (options.onHover)
-    events.on('hover', options.onHover)
-
-  const disposables: (() => void)[] = []
   let layoutNodes: NodeLayout<T>[] = []
-  const componentEl = document.createElement('div')
   const canvas = document.createElement('canvas')
   const c = canvas.getContext('2d')!
   let width = 0
@@ -149,7 +141,6 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   let bgOriginX = 0
   let bgOriginY = 0
   let bgColor = ''
-  let fgOnColor = ''
   const normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
   const boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
   let ellipsisWidth = 0
@@ -193,7 +184,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     const oldWidth = width
     const oldHeight = height
     const ratio = window.devicePixelRatio || 1
-    width = Math.min(componentEl.clientWidth, 1600)
+    width = Math.min(el.clientWidth, 1600)
     height = Math.max(Math.round(width / 2), innerHeight - 200)
     canvas.style.width = width + 'px'
     canvas.style.height = height + 'px'
@@ -281,7 +272,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     }
 
     if (culling !== Culling.Culled && !node.isOutput) {
-      c.fillStyle = colorToCanvasFill(getColor(node), c, bgOriginX, bgOriginY, 1)
+      c.fillStyle = colorToCanvasFill(getColor(node) || palette.fallback, c, bgOriginX, bgOriginY, 1)
       if (layout.children.length) {
         // Avoiding overdraw is probably a good idea...
         c.fillRect(x, y, w, CONSTANT_HEADER_HEIGHT)
@@ -305,17 +296,17 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
 
     // Draw the hover highlight
     if (hoveredNode === node && !isOutputFile && (!currentNode || inCurrentNode)) {
-      c.fillStyle = 'rgba(255,255,255,0.5)'
+      c.fillStyle = palette.hover
       c.fillRect(x, y, w, h)
     }
 
     if (!isOutputFile) {
       // Note: The stroke deliberately overlaps the right and bottom edges
-      strokeRectWithFirefoxBugWorkaround(c, '#222', x + 0.5, y + 0.5, w, h)
+      strokeRectWithFirefoxBugWorkaround(c, palette.stroke, x + 0.5, y + 0.5, w, h)
     }
 
     if (h >= CONSTANT_HEADER_HEIGHT) {
-      c.fillStyle = isOutputFile ? fgOnColor : '#000'
+      c.fillStyle = isOutputFile ? palette.fg : palette.text
 
       // Switch to the bold font
       if (isOutputFile) {
@@ -382,9 +373,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   }
 
   let draw = (): void => {
-    const bodyStyle = getComputedStyle(document.body)
-    bgColor = bodyStyle.getPropertyValue('--bg')
-    fgOnColor = bodyStyle.getPropertyValue('--fg-on')
+    bgColor = palette.bg
     animationFrame = null
 
     c.clearRect(0, 0, width, height)
@@ -512,7 +501,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     events.emit('hover', null, e)
   })
 
-  componentEl.addEventListener('click', (e) => {
+  el.addEventListener('click', (e) => {
     const layout = hitTestNode(e)
     if (layout) {
       const node = layout.node
@@ -540,17 +529,11 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
 
   disposables.push(useWheelEventListener(updateHover))
   disposables.push(useResizeEventListener(resize))
-  disposables.push(useDarkModeListener(draw))
 
-  function dispose() {
-    disposables.forEach(d => d())
-    disposables.length = 0
-  }
-
-  componentEl.append(canvas)
+  el.append(canvas)
 
   return {
-    el: componentEl,
+    el,
     events,
     resize,
     draw,

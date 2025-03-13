@@ -137,6 +137,9 @@ importers:
       vue:
         specifier: catalog:playground
         version: 3.5.13(typescript@5.8.2)
+      vue-tsc:
+        specifier: catalog:playground
+        version: 2.2.8(typescript@5.8.2)
       yaml:
         specifier: catalog:testing
         version: 2.7.0

@@ -1,8 +1,6 @@
 import type { ColorMapPlain, ColorValue } from '../types/color'
 import type { Tree, TreeNode } from '../types/tree'
 
-export const COLOR_FALLBACK = '#CCC'
-
 export function hueAngleToColor(hueAngle: number): string {
   const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
   const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
@@ -18,13 +16,12 @@ let patternScale = 1
 let pattern: CanvasPattern
 
 export function colorToCanvasFill(
-  color: ColorValue | undefined,
+  color: ColorValue,
   c: CanvasRenderingContext2D,
   originX: number,
   originY: number,
   scale: number,
 ): string | CanvasPattern {
-  color ||= COLOR_FALLBACK
   if (!Array.isArray(color))
     return color as string
 
@@ -100,9 +97,8 @@ export function colorToCanvasFill(
 }
 
 export function colorToCssBackground(
-  color: ColorValue | undefined,
+  color: ColorValue,
 ): string {
-  color ||= COLOR_FALLBACK
   if (Array.isArray(color)) {
     return `url('`
       + `data:image/svg+xml,`

@@ -35,7 +35,7 @@
     "release": "bumpp && pnpm publish",
     "start": "tsx src/index.ts",
     "test": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "vue-tsc --noEmit",
     "prepare": "simple-git-hooks"
   },
   "devDependencies": {
@@ -57,6 +57,7 @@
     "vitest": "catalog:testing",
     "vitest-package-exports": "catalog:testing",
     "vue": "catalog:playground",
+    "vue-tsc": "catalog:playground",
     "yaml": "catalog:testing"
   },
   "simple-git-hooks": {
