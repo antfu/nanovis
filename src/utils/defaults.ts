@@ -9,7 +9,7 @@ export const DEFAULT_PALETTE: Palette = {
   fallback: '#CCC',
   stroke: '#0008',
   text: '#222',
-  hover: '#fff6',
+  hover: '#fff5',
   fg: '#fff',
   bg: '#222',
 }

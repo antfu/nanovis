@@ -1,9 +1,9 @@
 import type { ColorMapPlain, ColorValue } from '../types/color'
 import type { Tree, TreeNode } from '../types/tree'
 
-export function hueAngleToColor(hueAngle: number): string {
-  const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
-  const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
+export function hueAngleToColor(hueAngle: number, saturationMultiplier = 1, lightnessMultiplier = 1): string {
+  const saturation = (0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))) * saturationMultiplier
+  const lightness = (0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))) * lightnessMultiplier
   return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
 }
 
@@ -117,9 +117,13 @@ export function createColorGetterFromMap<T>(plain: ColorMapPlain): (node: TreeNo
   return (node: TreeNode<T>) => node.id ? plain[node.id] || node.color : node.color
 }
 
-export function createColorGetterGradient<T>(tree: Tree<T>): (node: TreeNode<T>) => ColorValue | undefined {
+export function createColorGetterGradient<T>(
+  tree: Tree<T>,
+  saturationMultiplier = 1,
+  lightnessMultiplier = 1,
+): (node: TreeNode<T>) => ColorValue | undefined {
   const colorMapping: ColorMapPlain = {}
-  assignColorsByDirectory(colorMapping, tree.root, 0, Math.PI * 2)
+  assignColorsByDirectory(colorMapping, tree.root, 0, Math.PI * 2, saturationMultiplier, lightnessMultiplier)
   return createColorGetterFromMap(colorMapping)
 }
 
@@ -128,13 +132,15 @@ function assignColorsByDirectory<T>(
   node: TreeNode<T>,
   startAngle: number,
   sweepAngle: number,
+  saturationMultiplier = 1,
+  lightnessMultiplier = 1,
 ): void {
   const totalBytes = node.size
-  colorMapping[node.id] = hueAngleToColor(startAngle + sweepAngle / 2)
+  colorMapping[node.id] = hueAngleToColor(startAngle + sweepAngle / 2, saturationMultiplier, lightnessMultiplier)
 
   for (const child of node.children) {
     const childSweepAngle = child.size / totalBytes * sweepAngle
-    assignColorsByDirectory(colorMapping, child, startAngle, childSweepAngle)
+    assignColorsByDirectory(colorMapping, child, startAngle, childSweepAngle, saturationMultiplier, lightnessMultiplier)
     startAngle += childSweepAngle
   }
 }
