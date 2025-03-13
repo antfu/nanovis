@@ -1,4 +1,4 @@
-import * as styles from './summary.css'
+import styles from './summary.module.css'
 import { Metafile } from './metafile'
 import { cjsColor, esmColor } from './color'
 import {

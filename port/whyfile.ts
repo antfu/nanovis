@@ -1,4 +1,4 @@
-import * as styles from './whyfile.css'
+import styles from './whyfile.module.css'
 import { Metafile } from './metafile';
 import {
   bytesToText,

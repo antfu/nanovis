@@ -1,6 +1,5 @@
 import { createTreemap } from '../../port/treemap'
 import data from '../esbuild-github-io-analyze-example-metafile.json'
-import '../../port/index.css'
 
 document.body.innerHTML = 'Hello World'
 

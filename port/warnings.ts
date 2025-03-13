@@ -1,4 +1,4 @@
-import * as styles from './warnings.css'
+import styles from './warnings.module.css'
 import { Metafile } from './metafile'
 import { showWhyFile } from './whyfile'
 import {

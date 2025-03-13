@@ -1,5 +1,5 @@
-import * as indexStyles from './index.css'
-import * as styles from './flame.css'
+import indexStyles from './index.module.css'
+import styles from './flame.module.css'
 import { Metafile } from './metafile'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
 import { accumulatePath, orderChildrenBySize, TreeNodeInProgress } from './tree'

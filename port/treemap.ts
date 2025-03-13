@@ -1,5 +1,5 @@
-import * as indexStyles from './index.css'
-import * as styles from './treemap.css'
+import indexStyles from './index.module.css'
+import styles from './treemap.module.css'
 import { Metafile } from './metafile'
 import { TreeNodeInProgress, accumulatePath, orderChildrenBySize } from './tree'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
@@ -612,7 +612,7 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
       let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
       let nameSplit = tooltip.length - node.name_.length
       tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      tooltip += colorMode.value === COLOR.FORMAT
+      tooltip += colorMode === COLOR.FORMAT
         ? textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
         : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
       showTooltip(e.pageX, e.pageY + 20, tooltip)
