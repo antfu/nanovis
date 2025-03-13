@@ -86,6 +86,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
       currentNode = node
       updateSunburst()
       events.emit('click', node, e)
+      events.emit('select', node)
     }
   }
 
@@ -411,6 +412,7 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     sourceStartAngle = animatedStartAngle
     sourceSweepAngle = animatedSweepAngle
     targetNode = currentNode
+    events.emit('select', currentNode)
   }
 
   el.append(canvas)

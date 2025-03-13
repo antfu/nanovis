@@ -15,6 +15,7 @@ export interface TreeNode<T> {
 export interface Events<T> {
   hover: (node: TreeNode<T> | null, e?: MouseEvent) => void
   click: (node: TreeNode<T>, e: MouseEvent) => void
+  select: (node: TreeNode<T> | null) => void
   leave: (e?: MouseEvent) => void
 }
 
@@ -32,6 +33,7 @@ export interface GraphBaseOptions<T> {
   onHover?: Events<T>['hover']
   onClick?: Events<T>['click']
   onLeave?: Events<T>['leave']
+  onSelect?: Events<T>['select']
 }
 
 export interface GraphBase<T> {

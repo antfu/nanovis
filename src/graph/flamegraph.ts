@@ -66,13 +66,11 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
   let ellipsisWidth = 0
   let currentWidthCache: Record<number, number> = normalWidthCache
 
-  const changeHoveredNode = (node: TreeNode<T> | null, e: MouseEvent): void => {
+  const changeHoveredNode = (node: TreeNode<T> | null): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
+      events.emit('select', node)
       canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
-      if (!node) {
-        events.emit('hover', null, e)
-      }
       invalidate()
     }
   }
@@ -309,7 +307,7 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
 
   const updateHover = (e: MouseEvent | WheelEvent): void => {
     const node = hitTestNode(e)
-    changeHoveredNode(node, e)
+    changeHoveredNode(node)
 
     // Show a tooltip for hovered nodes
     events.emit('hover', node, e)
@@ -347,8 +345,8 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
     updateHover(e)
   }
 
-  canvas.onmouseout = (e) => {
-    changeHoveredNode(null, e)
+  canvas.onmouseout = () => {
+    changeHoveredNode(null)
   }
 
   canvas.onclick = (e) => {
@@ -357,7 +355,7 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
       return
 
     const node = hitTestNode(e)
-    changeHoveredNode(node, e)
+    changeHoveredNode(node)
 
     if (node && !node.children.length) {
       events.emit('click', node, e)

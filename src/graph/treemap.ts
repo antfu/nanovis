@@ -440,6 +440,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   let changeHoveredNode = (node: TreeNode<T> | null): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
+      events.emit('select', node)
       canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
       invalidate()
     }

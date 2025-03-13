@@ -31,6 +31,8 @@ export function createGraphContext<T>(
     events.on('hover', options.onHover)
   if (options.onLeave)
     events.on('leave', options.onLeave)
+  if (options.onSelect)
+    events.on('select', options.onSelect)
 
   function dispose() {
     disposables.forEach(disposable => disposable())
