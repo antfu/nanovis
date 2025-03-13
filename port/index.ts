@@ -14,6 +14,7 @@ import {
   localStorageGetItem,
   localStorageSetItem,
 } from './helpers'
+import { colorMode } from './color-mode'
 
 enum CHART {
   NONE,
@@ -29,7 +30,6 @@ let useTreemap = document.getElementById('useTreemap') as HTMLAnchorElement
 let useSunburst = document.getElementById('useSunburst') as HTMLAnchorElement
 let useFlame = document.getElementById('useFlame') as HTMLAnchorElement
 let chartMode = CHART.NONE
-export let colorMode = COLOR.NONE
 
 let isPlainObject = (value: any): boolean => {
   return typeof value === 'object' && value !== null && !(value instanceof Array)
@@ -48,7 +48,7 @@ export let finishLoading = (json: string): void => {
       chartPanel.innerHTML = ''
 
       if (chartMode === CHART.TREEMAP) {
-        chartPanel.append(createTreemap(metafile))
+        chartPanel.append(createTreemap(metafile).el)
         useTreemap.classList.add(styles.active)
         localStorageSetItem('chart', 'treemap')
       }
@@ -68,9 +68,9 @@ export let finishLoading = (json: string): void => {
   }
 
   let useColor = (use: COLOR): void => {
-    if (colorMode !== use) {
-      colorMode = use
-      updateColorMapping(metafile, colorMode)
+    if (colorMode.value !== use) {
+      colorMode.value = use
+      updateColorMapping(metafile, colorMode.value)
     }
   }
 
@@ -85,8 +85,8 @@ export let finishLoading = (json: string): void => {
   useFlame.onclick = () => useChart(CHART.FLAME)
 
   chartMode = CHART.NONE
-  colorMode = COLOR.NONE
-  showSummary(metafile, () => useColor(colorMode === COLOR.DIRECTORY ? COLOR.FORMAT : COLOR.DIRECTORY))
+  colorMode.value = COLOR.NONE
+  showSummary(metafile, () => useColor(colorMode.value === COLOR.DIRECTORY ? COLOR.FORMAT : COLOR.DIRECTORY))
   showWarningsPanel(metafile)
   hideWhyFile()
   useChart(

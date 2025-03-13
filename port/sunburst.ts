@@ -3,11 +3,10 @@ import * as styles from './sunburst.css'
 import { Metafile } from './metafile'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
 import { accumulatePath, orderChildrenBySize, TreeNodeInProgress } from './tree'
-import { colorMode } from './index'
+import { colorMode } from './color-mode'
 import {
   canvasFillStyleForInputPath,
   COLOR,
-  colorLegendEl,
   cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
   setAfterColorMappingUpdate,
@@ -391,7 +390,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
         } else {
           tooltip = '<b>' + textToHTML(shortenDataURLForDisplay(tooltip)) + '</b>'
         }
-        if (colorMode === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
+        if (colorMode.value === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
         else tooltip += ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
         showTooltip(e.pageX, e.pageY + 20, tooltip)
         canvas.style.cursor = 'pointer'
@@ -443,8 +442,6 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
     }
 
     leftEl.className = styles.left
-    leftEl.append(canvas, colorLegendEl)
-
     tooltipEl.className = indexStyles.tooltip
     mainEl.append(tooltipEl, leftEl)
 
@@ -581,7 +578,7 @@ export let createSunburst = (metafile: Metafile): HTMLDivElement => {
 
         let bytesEl = document.createElement('div')
         bytesEl.className = styles.last
-        bytesEl.textContent = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(child.inputPath_, '') : size
+        bytesEl.textContent = colorMode.value === COLOR.FORMAT ? moduleTypeLabelInputPath(child.inputPath_, '') : size
         barEl.append(bytesEl)
 
         // Use a link so we get keyboard support

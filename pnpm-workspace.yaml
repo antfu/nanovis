@@ -8,6 +8,7 @@ catalogs:
     '@antfu/eslint-config': ^4.10.1
     '@antfu/ni': ^24.1.0
     bumpp: ^10.1.0
+    esbuild: ^0.25.1
     eslint: ^9.22.0
     lint-staged: ^15.5.0
     simple-git-hooks: ^2.11.1
@@ -15,6 +16,8 @@ catalogs:
     typescript: ^5.8.2
     unbuild: ^3.5.0
     vite: ^6.2.1
+  frontend:
+    nanoevents: ^9.1.0
   inlined:
     '@antfu/utils': ^9.1.0
   testing:

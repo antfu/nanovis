@@ -156,13 +156,11 @@ export let updateColorMapping = (metafile: Metafile, color: COLOR): void => {
   if (previousColor !== color) {
     previousColor = color
     colorMapping = {}
-    colorLegendEl.innerHTML = ''
 
     if (color === COLOR.DIRECTORY) {
       assignColorsByDirectory(colorMapping, root, 0, Math.PI * 2)
     } else if (color === COLOR.FORMAT) {
       assignColorsByFormat(colorMapping, root)
-      colorLegendEl.innerHTML = formatLegendHTML
     }
 
     if (afterColorMappingUpdate) afterColorMappingUpdate()
@@ -231,11 +229,3 @@ let assignColorsByFormat = (colorMapping: ColorMapping, node: TreeNodeInProgress
   colorMapping[node.inputPath_] = colorForFormats(formats)
   return formats
 }
-
-export let colorLegendEl = document.createElement('div')
-let formatLegendHTML = ''
-  + `<span class="${styles.chit}" style="background:` + esmColor + '"></span>ESM <small>modern, faster, smaller</small>'
-  + `<span class="${styles.chit}" style="background:` + cjsColor + '"></span>CommonJS <small>legacy, slower, larger</small>'
-  + `<span class="${styles.chit}" style="background:` + otherColor + '"></span>Other'
-
-colorLegendEl.id = styles.colorLegend

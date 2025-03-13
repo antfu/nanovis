@@ -3,12 +3,10 @@ import * as styles from './flame.css'
 import { Metafile } from './metafile'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
 import { accumulatePath, orderChildrenBySize, TreeNodeInProgress } from './tree'
-import { colorMode } from './index'
+import { colorMode } from './color-mode'
 import {
   canvasFillStyleForInputPath,
   COLOR,
-  colorLegendEl,
-  cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
   otherColor,
   setAfterColorMappingUpdate,
@@ -303,7 +301,7 @@ export let createFlame = (metafile: Metafile): HTMLDivElement => {
 
     // Typeset the node size
     if (typesetX + ellipsisWidth < typesetW) {
-      sizeText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, ' – ') : node.sizeText_
+      sizeText = colorMode.value === COLOR.FORMAT ? moduleTypeLabelInputPath(node.inputPath_, ' – ') : node.sizeText_
       measuredW = c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
         sizeText = textOverflowEllipsis(sizeText, typesetW - typesetX)
@@ -445,7 +443,7 @@ export let createFlame = (metafile: Metafile): HTMLDivElement => {
       let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
       let nameSplit = tooltip.length - node.name_.length
       tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      tooltip += colorMode === COLOR.FORMAT
+      tooltip += colorMode.value === COLOR.FORMAT
         ? textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
         : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
       showTooltip(e.pageX, e.pageY + 20, tooltip)
@@ -547,8 +545,5 @@ export let createFlame = (metafile: Metafile): HTMLDivElement => {
   mainEl.append(canvas)
   componentEl.append(mainEl, tooltipEl)
 
-  let sectionEl = document.createElement('section')
-  sectionEl.append(colorLegendEl)
-  componentEl.append(sectionEl)
   return componentEl
 }

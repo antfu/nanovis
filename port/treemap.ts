@@ -3,14 +3,12 @@ import * as styles from './treemap.css'
 import { Metafile } from './metafile'
 import { TreeNodeInProgress, accumulatePath, orderChildrenBySize } from './tree'
 import { isWhyFileVisible, showWhyFile } from './whyfile'
-import { colorMode } from './index'
 import {
   COLOR,
   canvasFillStyleForInputPath,
-  colorLegendEl,
-  cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
   setAfterColorMappingUpdate,
+  updateColorMapping,
 } from './color'
 import {
   bytesToText,
@@ -61,7 +59,7 @@ enum Culling {
   Culled
 }
 
-let analyzeDirectoryTree = (metafile: Metafile): Tree => {
+function analyzeDirectoryTree(metafile: Metafile): Tree {
   let outputs = metafile.outputs
   let totalBytes = 0
   let maxDepth = 0
@@ -175,7 +173,7 @@ interface NodeLayout {
 }
 
 // "Squarified Treemaps": https://www.win.tue.nl/~vanwijk/stm.pdf
-let layoutTreemap = (sortedChildren: TreeNode[], x: number, y: number, w: number, h: number): NodeLayout[] => {
+function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: number, h: number): NodeLayout[] {
   let children: NodeLayout[] = []
 
   let worst = (start: number, end: number, shortestSide: number, totalArea: number, bytesToArea: number): number => {
@@ -252,7 +250,17 @@ let layoutTreemap = (sortedChildren: TreeNode[], x: number, y: number, w: number
   return children
 }
 
-export let createTreemap = (metafile: Metafile): HTMLDivElement => {
+export interface TreemapOptions {
+  colorMode?: COLOR
+}
+
+export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
+  const {
+    colorMode = COLOR.DIRECTORY,
+  } = options || {}
+
+  updateColorMapping(metafile, colorMode)
+
   let tree = analyzeDirectoryTree(metafile)
   let layoutNodes: NodeLayout[] = []
   let componentEl = document.createElement('div')
@@ -604,7 +612,7 @@ export let createTreemap = (metafile: Metafile): HTMLDivElement => {
       let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
       let nameSplit = tooltip.length - node.name_.length
       tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      tooltip += colorMode === COLOR.FORMAT
+      tooltip += colorMode.value === COLOR.FORMAT
         ? textToHTML(moduleTypeLabelInputPath(node.inputPath_, ' – '))
         : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
       showTooltip(e.pageX, e.pageY + 20, tooltip)
@@ -682,23 +690,13 @@ export let createTreemap = (metafile: Metafile): HTMLDivElement => {
   setResizeEventListener(resize)
 
   componentEl.id = styles.treemapPanel
-  componentEl.innerHTML = ''
-    + `<div class="${indexStyles.summary}">`
-    + '<p>'
-    + 'This visualization shows which input files were placed into each output file in the bundle. '
-    + 'Click on a node to expand and focus it.'
-    + '</p>'
-    + '<p>'
-    + '<b>Benefit of this chart type:</b> Makes the most of available screen area.'
-    + '</p>'
-    + '</div>'
-
   tooltipEl.className = indexStyles.tooltip
   mainEl.append(canvas)
   componentEl.append(mainEl, tooltipEl)
 
-  let sectionEl = document.createElement('section')
-  sectionEl.append(colorLegendEl)
-  componentEl.append(sectionEl)
-  return componentEl
+  return {
+    el: componentEl,
+    resize,
+    draw,
+  }
 }
