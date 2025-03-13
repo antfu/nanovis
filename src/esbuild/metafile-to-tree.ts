@@ -1,6 +1,7 @@
 import type { Tree, TreeNode } from '../types/tree'
 import type { Metafile } from './metafile'
-import { bytesToText, commonPrefixFinder, hasOwnProperty, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from '../utils/helpers'
+import { bytesToText, hasOwnProperty } from '../utils/helpers'
+import { commonPrefixFinder, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from './helpers'
 
 export function analyzeDirectoryTree(metafile: Metafile): Tree {
   const outputs = metafile.outputs

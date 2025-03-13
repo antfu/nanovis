@@ -1,11 +1,16 @@
 import type { Metafile } from '../esbuild/metafile'
 import type { TreeNodeInProgress } from '../esbuild/metafile-to-tree'
-import { accumulatePath, orderChildrenBySize } from '../esbuild/metafile-to-tree'
 import {
-  hueAngleToColor,
   isSourceMapPath,
   stripDisabledPathPrefix,
-} from './helpers'
+} from '../esbuild/helpers'
+import { accumulatePath, orderChildrenBySize } from '../esbuild/metafile-to-tree'
+
+export function hueAngleToColor(hueAngle: number): string {
+  const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
+  const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
+  return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
+}
 
 export enum COLOR {
   NONE = 0,

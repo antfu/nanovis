@@ -1,31 +1,38 @@
-export const hasOwnProperty = Object.prototype.hasOwnProperty
-export const indexOf = Array.prototype.indexOf
+const isFirefox = /\bFirefox\//.test(navigator.userAgent)
 
 let numberFormat: Intl.NumberFormat | undefined
-const isSourceMap = /\.\w+\.map$/
-const disabledPathPrefix = /^\(disabled\):/
 
-export const isMac = navigator.platform.includes('Mac')
-
-export function now(): number {
-  return (window.performance || Date).now()
-}
-
-export function isSourceMapPath(path: string): boolean {
-  return isSourceMap.test(path)
-}
-
-export function stripDisabledPathPrefix(path: string): string {
-  return path.replace(disabledPathPrefix, '')
-}
+export const hasOwnProperty = Object.prototype.hasOwnProperty
+export const indexOf = Array.prototype.indexOf
 
 export function formatInteger(value: number): string {
   return numberFormat ? numberFormat.format(value) : value + ''
 }
 
+export function now(): number {
+  return (window.performance || Date).now()
+}
+
 export function formatNumberWithDecimal(value: number): string {
   const parts = value.toFixed(1).split('.', 2)
   return formatInteger(+parts[0]) + '.' + parts[1]
+}
+
+export function shortenDataURLForDisplay(path: string): string {
+  // Data URLs can be really long. This shortens them to something suitable for
+  // display in a tooltip. This shortening behavior is also what esbuild does.
+  if (path.startsWith('data:') && path.includes(',')) {
+    path = path.slice(0, 65).replace(/\n/g, '\\n')
+    return '<' + (path.length > 64 ? path.slice(0, 64) + '...' : path) + '>'
+  }
+  return path
+}
+
+export function textToHTML(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 export function bytesToText(bytes: number): string {
@@ -39,21 +46,6 @@ export function bytesToText(bytes: number): string {
     return formatNumberWithDecimal(bytes / (1024 * 1024)) + ' mb'
   return formatNumberWithDecimal(bytes / (1024 * 1024 * 1024)) + ' gb'
 }
-
-export function textToHTML(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-export function hueAngleToColor(hueAngle: number): string {
-  const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
-  const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
-  return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
-}
-
-const isFirefox = /\bFirefox\//.test(navigator.userAgent)
 
 export function strokeRectWithFirefoxBugWorkaround(c: CanvasRenderingContext2D, color: string, x: number, y: number, w: number, h: number): void {
   // Line drawing in Firefox (at least on macOS) has some really weird bugs:
@@ -100,105 +92,6 @@ export function createSpanWithClass(className: string, text: string): HTMLSpanEl
   span.className = className
   span.textContent = text
   return span
-}
-
-export function shortenDataURLForDisplay(path: string): string {
-  // Data URLs can be really long. This shortens them to something suitable for
-  // display in a tooltip. This shortening behavior is also what esbuild does.
-  if (path.startsWith('data:') && path.includes(',')) {
-    path = path.slice(0, 65).replace(/\n/g, '\\n')
-    return '<' + (path.length > 64 ? path.slice(0, 64) + '...' : path) + '>'
-  }
-  return path
-}
-
-export function splitPathBySlash(path: string): string[] {
-  // Treat data URLs (e.g. "data:text/plain;base64,ABCD") as a single path element
-  if (path.startsWith('data:') && path.includes(',')) {
-    return [path]
-  }
-
-  const parts = path.split('/')
-
-  // Replace ['a:', '', 'b'] at the start of the path with ['a://b']. This
-  // handles paths that look like a URL scheme such as "https://example.com".
-  if (parts.length >= 3 && parts[1] === '' && parts[0].endsWith(':')) {
-    parts.splice(0, 3, parts.slice(0, 3).join('/'))
-  }
-
-  return parts
-}
-
-export function commonPrefixFinder(path: string, commonPrefix: string[] | undefined): string[] {
-  if (path === '')
-    return []
-  const parts = splitPathBySlash(path)
-  if (!commonPrefix)
-    return parts
-
-  // Note: This deliberately loops one past the end of the array so it can compare against "undefined"
-  for (let i = 0; i <= parts.length; i++) {
-    if (commonPrefix[i] !== parts[i]) {
-      commonPrefix.length = i
-      break
-    }
-  }
-
-  return commonPrefix
-}
-
-export function commonPostfixFinder(path: string, commonPostfix: string[] | undefined): string[] {
-  const parts = splitPathBySlash(path)
-  if (!commonPostfix)
-    return parts.reverse()
-
-  // Note: This deliberately loops one past the end of the array so it can compare against "undefined"
-  for (let i = 0; i <= parts.length; i++) {
-    if (commonPostfix[i] !== parts[parts.length - i - 1]) {
-      commonPostfix.length = i
-      break
-    }
-  }
-
-  return commonPostfix
-}
-
-export function posixDirname(path: string): string {
-  const slash = path.lastIndexOf('/')
-  return slash < 0 ? '.' : path.slice(0, slash)
-}
-
-export function posixRelPath(path: string, relToDir: string): string {
-  const pathParts = path.split('/')
-  const dirParts = relToDir === '.' ? [] : relToDir.split('/')
-  let i = 0
-  while (i < dirParts.length && pathParts[0] === dirParts[i]) {
-    pathParts.shift()
-    i++
-  }
-  if (i === dirParts.length) {
-    pathParts.unshift('.')
-  }
-  else {
-    while (i < dirParts.length) {
-      pathParts.unshift('..')
-      i++
-    }
-  }
-  return pathParts.join('/')
-}
-
-export function nodeModulesPackagePathOrNull(path: string): string | null {
-  let parts = splitPathBySlash(path)
-  for (let i = parts.length - 1; i >= 0; i--) {
-    if (parts[i] === 'node_modules') {
-      parts = parts.slice(i + 1)
-      if (parts.length > 1 && /^index\.[jt]sx?$/.test(parts[parts.length - 1]))
-        parts.pop()
-      return parts.join('/')
-    }
-  }
-  return null
 }
 
 export let lastInteractionWasKeyboard = false

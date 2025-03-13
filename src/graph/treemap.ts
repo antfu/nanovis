@@ -15,7 +15,6 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-// import styles from './treemap.module.css'
 
 enum CONSTANTS {
   PADDING = 4,

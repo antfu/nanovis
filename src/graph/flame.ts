@@ -16,7 +16,6 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-// import styles from './flame.module.css'
 
 enum CONSTANTS {
   MARGIN = 50,
