@@ -5,7 +5,7 @@ import {
   canvasFillStyleForInputPath,
   COLOR,
   moduleTypeLabelInputPath,
-  setAfterColorMappingUpdate,
+  // setAfterColorMappingUpdate,
   updateColorMapping,
 } from './color'
 import {
@@ -13,9 +13,9 @@ import {
   commonPrefixFinder,
   isSourceMapPath,
   now,
-  setDarkModeListener,
-  setResizeEventListener,
-  setWheelEventListener,
+  // setDarkModeListener,
+  // setResizeEventListener,
+  // setWheelEventListener,
   splitPathBySlash,
   stripDisabledPathPrefix,
   strokeRectWithFirefoxBugWorkaround,
@@ -655,16 +655,16 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     }
   }
 
-  canvas.onmousemove = e => {
+  canvas.addEventListener('mousemove', e => {
     updateHover(e)
-  }
+  })
 
-  canvas.onmouseout = e => {
+  canvas.addEventListener('mouseout', e => {
     changeHoveredNode(null)
     events.emit('hover', null, e)
-  }
+  })
 
-  componentEl.onclick = e => {
+  componentEl.addEventListener('click', e => {
     let layout = hitTestNode(e)
     if (layout) {
       let node = layout.node_
@@ -684,18 +684,26 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
       changeCurrentNode(null)
       updateHover(e)
     }
-  }
-
-  setWheelEventListener(e => {
-    // if (isWhyFileVisible()) return
-    updateHover(e)
   })
 
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
-  setDarkModeListener(draw)
-  setAfterColorMappingUpdate(draw)
-  setResizeEventListener(resize)
+  
+  const disposables: (()=>void)[] = []
+
+  window.addEventListener('wheel', updateHover)
+  window.addEventListener('resize', resize)
+
+  disposables.push(() => window.removeEventListener('wheel', updateHover))
+  disposables.push(() => window.removeEventListener('resize', resize))
+  // setDarkModeListener(draw)
+  // setAfterColorMappingUpdate(draw)
+  // setResizeEventListener(resize)
+
+  function dispose() {
+    disposables.forEach(d => d())
+    disposables.length = 0
+  }
 
   componentEl.id = styles.treemapPanel
   mainEl.append(canvas)
@@ -706,5 +714,6 @@ export function createTreemap(metafile: Metafile, options?: TreemapOptions) {
     events,
     resize,
     draw,
+    dispose,
   }
 }

@@ -11,21 +11,21 @@ export let now = (): number => {
   return (window.performance || Date).now()
 }
 
-export let localStorageGetItem = (key: string): string | null => {
-  try {
-    // This throws in Safari sometimes, but it's ok to ignore that
-    return localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
+// export let localStorageGetItem = (key: string): string | null => {
+//   try {
+//     // This throws in Safari sometimes, but it's ok to ignore that
+//     return localStorage.getItem(key)
+//   } catch {
+//     return null
+//   }
+// }
 
-export let localStorageSetItem = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-  }
-}
+// export let localStorageSetItem = (key: string, value: string): void => {
+//   try {
+//     localStorage.setItem(key, value)
+//   } catch {
+//   }
+// }
 
 export let isSourceMapPath = (path: string): boolean => {
   return isSourceMap.test(path)
@@ -70,6 +70,7 @@ export let hueAngleToColor = (hueAngle: number): string => {
 }
 
 let isFirefox = /\bFirefox\//.test(navigator.userAgent)
+
 
 export let strokeRectWithFirefoxBugWorkaround = (
   c: CanvasRenderingContext2D,

@@ -4,8 +4,8 @@ import { colorMode } from './color-mode'
 import { createFlame } from './flame'
 import {
   darkModeListener,
-  localStorageGetItem,
-  localStorageSetItem,
+  // localStorageGetItem,
+  // localStorageSetItem,
 } from './helpers'
 import styles from './index.module.css'
 import { showSummary } from './summary'
@@ -48,19 +48,19 @@ export let finishLoading = (json: string): void => {
       if (chartMode === CHART.TREEMAP) {
         chartPanel.append(createTreemap(metafile).el)
         useTreemap.classList.add(styles.active)
-        localStorageSetItem('chart', 'treemap')
+        // localStorageSetItem('chart', 'treemap')
       }
 
       else if (chartMode === CHART.SUNBURST) {
         chartPanel.append(createSunburst(metafile))
         useSunburst.classList.add(styles.active)
-        localStorageSetItem('chart', 'sunburst')
+        // localStorageSetItem('chart', 'sunburst')
       }
 
       else if (chartMode === CHART.FLAME) {
         chartPanel.append(createFlame(metafile))
         useFlame.classList.add(styles.active)
-        localStorageSetItem('chart', 'flame')
+        // localStorageSetItem('chart', 'flame')
       }
     }
   }
@@ -87,22 +87,18 @@ export let finishLoading = (json: string): void => {
   showSummary(metafile, () => useColor(colorMode.value === COLOR.DIRECTORY ? COLOR.FORMAT : COLOR.DIRECTORY))
   showWarningsPanel(metafile)
   hideWhyFile()
-  useChart(
-    localStorageGetItem('chart') === 'flame' ? CHART.FLAME :
-      localStorageGetItem('chart') === 'sunburst' ? CHART.SUNBURST :
-        CHART.TREEMAP)
+  useChart(CHART.TREEMAP)
   useColor(COLOR.DIRECTORY)
 }
 
-let docElemDataset = document.documentElement.dataset
+// let docElemDataset = document.documentElement.dataset
 let updateTheme = () => {
   // Keep the dark/light mode theme up to date with the rest of the site
-  docElemDataset.theme = localStorageGetItem('theme') + ''
+  // docElemDataset.theme = localStorageGetItem('theme') + ''
   if (darkModeListener) darkModeListener()
 }
 
 updateTheme()
-window.addEventListener('storage', updateTheme)
 
 document.getElementById('loadExample')!.onclick = () => {
   fetch('example-metafile.json').then(r => r.text()).then(finishLoading)
