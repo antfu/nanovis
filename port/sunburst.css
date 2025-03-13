@@ -1,0 +1,114 @@
+#sunburstPanel {
+  & main {
+    display: flex;
+    justify-content: center;
+    margin-top: 50px;
+    margin-bottom: 500px;
+  }
+
+  & .left {
+    margin-right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  & canvas {
+    display: block;
+    margin-bottom: 30px;
+  }
+
+  & .details {
+    flex: 1;
+    max-width: 800px;
+    position: relative;
+  }
+
+  & .dir {
+    font-size: 20px;
+    line-height: 1.2em;
+    display: flex;
+    white-space: pre;
+    margin: 0 10px 20px 10px;
+
+    & .segments {
+      flex: 1;
+      height: 20px;
+    }
+
+    & a {
+      opacity: 0.5;
+      text-decoration: none;
+
+      &[href]:hover {
+        text-decoration: underline;
+      }
+
+      &:last-child {
+        opacity: 1;
+        color: var(--fg-on);
+        font-weight: bold;
+      }
+    }
+  }
+
+  & .bars {
+    width: 100%;
+
+    & .row {
+      display: table-row;
+      text-decoration: none;
+      line-height: 26px;
+      color: var(--fg);
+
+      &.hover {
+        background: rgba(127, 127, 127, 0.2);
+        color: var(--fg-on);
+      }
+
+      &.hover .bar:after {
+        content: '';
+        position: absolute;
+        left: 1px;
+        top: 1px;
+        right: 1px;
+        bottom: 1px;
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      &>div {
+        display: table-cell;
+      }
+    }
+
+    & .name {
+      padding: 0 10px;
+      vertical-align: top;
+      white-space: pre;
+    }
+
+    & .size {
+      width: 100%;
+      padding-right: 100px;
+    }
+
+    & .bar {
+      position: relative;
+      height: 27px;
+      box-shadow: inset 0 0 0 1px #222;
+      margin-bottom: -1px;
+      min-width: var(--bar-min-width);
+
+      &.empty {
+        min-width: 0;
+      }
+    }
+
+    & .last {
+      position: absolute;
+      right: -10px;
+      width: 0;
+      white-space: nowrap;
+    }
+  }
+}

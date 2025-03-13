@@ -1,0 +1,36 @@
+:global(#warningsPanel) {
+  max-width: 1000px;
+  margin: auto;
+
+  & .expand {
+    margin-top: 20px;
+    text-align: center;
+  }
+
+  & .content {
+    display: none;
+  }
+
+  & .warning {
+    margin: 30px 0;
+    white-space: pre-wrap;
+    color: var(--fg-on);
+  }
+
+  & ul {
+    color: var(--fg);
+    margin: 5px 0 0 0;
+  }
+
+  & .dim {
+    opacity: 0.5;
+  }
+
+  & pre a {
+    text-decoration: none;
+  }
+
+  & pre a:hover {
+    text-decoration: underline;
+  }
+}

@@ -1,0 +1,47 @@
+:global(#summaryPanel) {
+  text-align: center;
+
+  & table {
+    border-collapse: collapse;
+    margin: auto;
+  }
+
+  & td:first-child {
+    text-align: right;
+  }
+
+  & h2 {
+    font-size: 30px;
+    line-height: 1em;
+    color: var(--fg-on);
+    margin: 0;
+  }
+
+  & .symbol {
+    font-size: 30px;
+    padding: 0 30px;
+  }
+
+  & .formatBreakdown {
+    display: inline-block;
+    margin: 20px auto 0 auto;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  & .formatBreakdown:hover .side {
+    text-decoration: underline;
+  }
+
+  & .bar {
+    display: inline-table;
+    vertical-align: middle;
+    margin: 0 0.8em;
+    border: 1px solid #222;
+
+    &>div {
+      height: 20px;
+      display: table-cell;
+    }
+  }
+}

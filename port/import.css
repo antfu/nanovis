@@ -1,0 +1,9 @@
+:global(#dragTarget) {
+  display: none;
+  position: fixed;
+  inset: 0;
+  user-select: none;
+  touch-action: none;
+  box-shadow: inset 0 0 0 10px #FFCF00;
+  z-index: 10;
+}
