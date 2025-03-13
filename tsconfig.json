@@ -12,5 +12,8 @@
     // "verbatimModuleSyntax": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "./port"
+  ]
 }

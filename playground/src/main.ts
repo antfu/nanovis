@@ -1,10 +1,8 @@
 /* eslint-disable no-console */
-import type { Metafile } from '../../port/metafile'
-import { COLOR, getColorMapping } from '../../port/color'
-import { createFlame } from '../../port/graph/flame'
-import { createSunburst } from '../../port/graph/sunburst'
-import { createTreemap } from '../../port/graph/treemap'
-import { analyzeDirectoryTree } from '../../port/metafile-to-tree'
+import type { Metafile } from '../../src/esbuild/metafile'
+import { createFlame, createSunburst, createTreemap } from '../../src'
+import { analyzeDirectoryTree } from '../../src/esbuild/metafile-to-tree'
+import { COLOR, getColorMapping } from '../../src/utils/color'
 import data from '../esbuild-github-io-analyze-example-metafile.json'
 import './index.css'
 

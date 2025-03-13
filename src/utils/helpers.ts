@@ -11,28 +11,8 @@ export function now(): number {
   return (window.performance || Date).now()
 }
 
-// export let localStorageGetItem = (key: string): string | null => {
-//   try {
-//     // This throws in Safari sometimes, but it's ok to ignore that
-//     return localStorage.getItem(key)
-//   } catch {
-//     return null
-//   }
-// }
-
-// export let localStorageSetItem = (key: string, value: string): void => {
-//   try {
-//     localStorage.setItem(key, value)
-//   } catch {
-//   }
-// }
-
 export function isSourceMapPath(path: string): boolean {
   return isSourceMap.test(path)
-}
-
-export function isDisabledPath(path: string): boolean {
-  return disabledPathPrefix.test(path)
 }
 
 export function stripDisabledPathPrefix(path: string): string {
@@ -213,7 +193,7 @@ export function nodeModulesPackagePathOrNull(path: string): string | null {
   for (let i = parts.length - 1; i >= 0; i--) {
     if (parts[i] === 'node_modules') {
       parts = parts.slice(i + 1)
-      if (parts.length > 1 && /^index\.(?:[jt]sx?)$/.test(parts[parts.length - 1]))
+      if (parts.length > 1 && /^index\.[jt]sx?$/.test(parts[parts.length - 1]))
         parts.pop()
       return parts.join('/')
     }

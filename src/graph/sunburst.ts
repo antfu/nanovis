@@ -1,12 +1,12 @@
-import type { ColorMapping } from '../color'
-import type { Events, Tree, TreeNode } from '../types'
+import type { Events, Tree, TreeNode } from '../types/tree'
+import type { ColorMapping } from '../utils/color'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
   COLOR,
   cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
-} from '../color'
+} from '../utils/color'
 import {
   bytesToText,
   lastInteractionWasKeyboard,
@@ -16,7 +16,7 @@ import {
   useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
-} from '../helpers'
+} from '../utils/helpers'
 import styles from './sunburst.module.css'
 
 enum CONSTANTS {

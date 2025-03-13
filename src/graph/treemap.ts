@@ -1,20 +1,20 @@
+import type { Events, Tree, TreeNode } from '../types/tree'
 import type {
   ColorMapping,
-} from '../color'
-import type { Events, Tree, TreeNode } from '../types'
+} from '../utils/color'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
   COLOR,
   moduleTypeLabelInputPath,
-} from '../color'
+} from '../utils/color'
 import {
   now,
   strokeRectWithFirefoxBugWorkaround,
   useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
-} from '../helpers'
+} from '../utils/helpers'
 import styles from './treemap.module.css'
 
 enum CONSTANTS {
