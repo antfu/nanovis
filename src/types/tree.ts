@@ -41,6 +41,7 @@ export interface GraphBase<T> {
   events: Emitter<Events<T>>
   draw: () => void
   resize: () => void
+  select: (node: TreeNode<T> | null) => void
 
   dispose: () => void
   [Symbol.dispose]: () => void

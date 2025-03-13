@@ -81,11 +81,11 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   let currentNode = tree.root
   let hoveredNode: TreeNode<T> | undefined
 
-  const changeCurrentNode = (node: TreeNode<T>, e: MouseEvent): void => {
+  const changeCurrentNode = (node: TreeNode<T> | null): void => {
+    node = node || tree.root
     if (currentNode !== node) {
       currentNode = node
       updateSunburst()
-      events.emit('click', node, e)
       events.emit('select', node)
     }
   }
@@ -344,13 +344,13 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
       stack = historyStack.slice()
     }
 
+    events.emit('click', node, e)
     if (node.children.length > 0) {
-      changeCurrentNode(node, e)
+      changeCurrentNode(node)
       historyStack = stack
     }
     else {
       e.preventDefault() // Prevent the browser from removing the focus on the dialog
-      events.emit('click', node, e)
     }
   }
 
@@ -423,6 +423,9 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
     draw,
     resize,
     dispose,
+    select: (node: TreeNode<T> | null) => {
+      changeCurrentNode(node)
+    },
     [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>
 }

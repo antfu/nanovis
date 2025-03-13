@@ -398,6 +398,9 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
     draw,
     resize,
     dispose,
+    select: (node: TreeNode<T> | null) => {
+      changeHoveredNode(node)
+    },
     [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>
 }

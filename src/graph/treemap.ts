@@ -440,7 +440,6 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   let changeHoveredNode = (node: TreeNode<T> | null): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
-      events.emit('select', node)
       canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
       invalidate()
     }
@@ -464,6 +463,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
       currentNode = node || searchFor(layoutNodes, currentNode!.node)
       updateCurrentLayout()
       invalidate()
+      events.emit('select', currentNode?.node || null)
     }
   }
 
@@ -480,14 +480,13 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     const layout = hitTestNode(e)
     if (layout) {
       const node = layout.node
+      events.emit('click', node, e)
       if (!node.children.length) {
-        events.emit('click', node, e)
         updateHover(e)
       }
       else if (layout !== currentLayout) {
         changeCurrentNode(layout)
         changeHoveredNode(null)
-        events.emit('click', node, e)
       }
       else {
         updateHover(e)
@@ -512,6 +511,9 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     events,
     resize,
     draw,
+    select: (node: TreeNode<T> | null) => {
+      changeCurrentNode(node ? searchFor(layoutNodes, node) : null)
+    },
     dispose,
     [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>
