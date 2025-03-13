@@ -1,12 +1,8 @@
 import type { Events, Tree, TreeNode } from '../types/tree'
-import type {
-  ColorMapping,
-} from '../utils/color'
+import type { ColorMapping } from '../utils/color'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
-  COLOR,
-  moduleTypeLabelInputPath,
 } from '../utils/color'
 import {
   now,
@@ -125,13 +121,11 @@ function layoutTreemap(sortedChildren: TreeNode[], x: number, y: number, w: numb
 
 export interface TreemapOptions {
   colorMapping?: ColorMapping
-  colorMode?: COLOR
 }
 
 export function createTreemap(tree: Tree, options?: TreemapOptions) {
   const {
     colorMapping = {},
-    colorMode = COLOR.DIRECTORY,
   } = options || {}
 
   const events = createNanoEvents<Events>()
@@ -340,7 +334,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
 
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
       if (nameText === node.text && node.children.length) {
-        const detailText = ' – ' + (colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.id, '') : node.subtext)
+        const detailText = node.subtext ? (' – ' + node.subtext) : ''
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
         c.globalAlpha = 0.5
@@ -367,8 +361,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
       if (h > CONSTANTS.INSET_Y + 16 && !node.children.length) {
-        const detailText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.id, '') : node.subtext
-        const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth)
+        const [sizeText, sizeWidth] = textOverflowEllipsis(node.subtext, maxWidth)
         c.globalAlpha = 0.5
         c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + CONSTANTS.HEADER_HEIGHT + Math.round(h - CONSTANTS.INSET_Y) / 2)
         c.globalAlpha = 1

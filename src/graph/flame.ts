@@ -5,9 +5,7 @@ import type {
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
-  COLOR,
-  moduleTypeLabelInputPath,
-  otherColor,
+  COLOR_FALLBACK,
 } from '../utils/color'
 import {
   now,
@@ -32,13 +30,11 @@ enum FLAGS {
 
 export interface CreateFlameOptions {
   colorMapping?: ColorMapping
-  colorMode?: COLOR
 }
 
 export function createFlame(tree: Tree, options?: CreateFlameOptions) {
   const {
     colorMapping = {},
-    colorMode = COLOR.DIRECTORY,
   } = options || {}
 
   const events = createNanoEvents<Events>()
@@ -143,7 +139,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     const typesetW = w + x - textX
     const fillColor = node.id
       ? canvasFillStyleForInputPath(colorMapping, c, node.id, zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
-      : otherColor
+      : COLOR_FALLBACK
     let textColor = 'black'
     let childRightEdge = -Infinity
 
@@ -189,7 +185,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
     // Typeset the node size
     if (typesetX + ellipsisWidth < typesetW) {
-      sizeText = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, node.id, ' – ') : node.subtext
+      sizeText = node.subtext
       measuredW = c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
         sizeText = textOverflowEllipsis(sizeText, typesetW - typesetX)

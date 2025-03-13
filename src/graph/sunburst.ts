@@ -3,9 +3,7 @@ import type { ColorMapping } from '../utils/color'
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
-  COLOR,
   cssBackgroundForInputPath,
-  moduleTypeLabelInputPath,
 } from '../utils/color'
 import {
   bytesToText,
@@ -72,13 +70,11 @@ function computeRadius(depth: number): number {
 
 export interface CreateSunburstOptions {
   colorMapping?: ColorMapping
-  colorMode?: COLOR
 }
 
 export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
   const {
     colorMapping = {},
-    colorMode = COLOR.DIRECTORY,
   } = options || {}
 
   while (tree.root.children.length === 1) {
@@ -515,7 +511,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
 
         const bytesEl = document.createElement('div')
         bytesEl.className = styles.last
-        bytesEl.textContent = colorMode === COLOR.FORMAT ? moduleTypeLabelInputPath(colorMapping, child.id, '') : size
+        bytesEl.textContent = size
         barEl.append(bytesEl)
 
         // Use a link so we get keyboard support

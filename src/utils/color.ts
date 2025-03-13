@@ -1,21 +1,10 @@
 import type { Metafile } from '../esbuild/metafile'
-import type { TreeNodeInProgress } from '../esbuild/metafile-to-tree'
-import {
-  isSourceMapPath,
-  stripDisabledPathPrefix,
-} from '../esbuild/helpers'
-import { accumulatePath, orderChildrenBySize } from '../esbuild/metafile-to-tree'
+import type { Tree, TreeNode } from '../types/tree'
 
 export function hueAngleToColor(hueAngle: number): string {
   const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
   const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
   return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
-}
-
-export enum COLOR {
-  NONE = 0,
-  DIRECTORY = 1,
-  FORMAT = 2,
 }
 
 enum FORMATS {
@@ -42,83 +31,83 @@ export function canvasFillStyleForInputPath(
   originY: number,
   scale: number,
 ): string | CanvasPattern {
-  const color = colorMapping[inputPath] || otherColor
-  if (color instanceof Array) {
-    const ratio = window.devicePixelRatio || 1
-    if (previousPatternContext !== c || previousPatternRatio !== ratio || previousPatternScale !== scale) {
-      const s = Math.round(64 * ratio) / 64
+  const color = colorMapping[inputPath] || COLOR_FALLBACK
+  if (!Array.isArray(color))
+    return color as string
 
-      patternScale = scale
-      patternScale = Math.log2(patternScale)
-      patternScale -= Math.floor(patternScale)
-      const t1 = patternScale
-      const t8 = Math.min(1, 8 * t1)
-      patternScale = 2 ** patternScale
-      const lineWidth = 8 * Math.SQRT2 / patternScale
+  const ratio = window.devicePixelRatio || 1
+  if (previousPatternContext !== c || previousPatternRatio !== ratio || previousPatternScale !== scale) {
+    const s = Math.round(64 * ratio) / 64
 
-      previousPatternContext = c
-      previousPatternRatio = ratio
-      previousPatternScale = scale
+    patternScale = scale
+    patternScale = Math.log2(patternScale)
+    patternScale -= Math.floor(patternScale)
+    const t1 = patternScale
+    const t8 = Math.min(1, 8 * t1)
+    patternScale = 2 ** patternScale
+    const lineWidth = 8 * Math.SQRT2 / patternScale
 
-      patternCanvas.width = patternCanvas.height = Math.round(64 * s)
-      patternContext.scale(s, s)
+    previousPatternContext = c
+    previousPatternRatio = ratio
+    previousPatternScale = scale
 
-      // Interpolate the two colors together so stripes are at 25% and 75% opacity
-      patternContext.fillStyle = color[0]
-      patternContext.fillRect(0, 0, 64, 64)
-      patternContext.globalAlpha = 0.25
-      patternContext.fillStyle = color[1]
-      patternContext.fillRect(0, 0, 64, 64)
-      patternContext.globalAlpha = 0.67
-      patternContext.strokeStyle = color[1]
+    patternCanvas.width = patternCanvas.height = Math.round(64 * s)
+    patternContext.scale(s, s)
 
-      // Draw the thicker lines
+    // Interpolate the two colors together so stripes are at 25% and 75% opacity
+    patternContext.fillStyle = color[0]
+    patternContext.fillRect(0, 0, 64, 64)
+    patternContext.globalAlpha = 0.25
+    patternContext.fillStyle = color[1]
+    patternContext.fillRect(0, 0, 64, 64)
+    patternContext.globalAlpha = 0.67
+    patternContext.strokeStyle = color[1]
+
+    // Draw the thicker lines
+    patternContext.beginPath()
+    for (let i = 0; i <= 64; i += 16) {
+      patternContext.moveTo(i - 32, i + 32)
+      patternContext.lineTo(i + 32, i - 32)
+    }
+    patternContext.lineWidth = lineWidth * (1 - (t8 - t1) / 2)
+    patternContext.stroke()
+
+    // Draw the thinner lines
+    if (t8 + t1 > 0) {
       patternContext.beginPath()
-      for (let i = 0; i <= 64; i += 16) {
+      for (let i = 8; i < 64; i += 16) {
         patternContext.moveTo(i - 32, i + 32)
         patternContext.lineTo(i + 32, i - 32)
       }
-      patternContext.lineWidth = lineWidth * (1 - (t8 - t1) / 2)
+      patternContext.lineWidth = lineWidth * (t8 + t1) / 2
       patternContext.stroke()
-
-      // Draw the thinner lines
-      if (t8 + t1 > 0) {
-        patternContext.beginPath()
-        for (let i = 8; i < 64; i += 16) {
-          patternContext.moveTo(i - 32, i + 32)
-          patternContext.lineTo(i + 32, i - 32)
-        }
-        patternContext.lineWidth = lineWidth * (t8 + t1) / 2
-        patternContext.stroke()
-      }
-
-      pattern = c.createPattern(patternCanvas, 'repeat')!
-      patternScale /= s
     }
 
-    // Re-center the pattern near the origin so the shaders don't run out of precision
-    originX /= 64 * patternScale * ratio
-    originX -= Math.floor(originX)
-    originX *= 64 * patternScale * ratio
-
-    pattern.setTransform(new DOMMatrix([
-      patternScale,
-      0,
-      0,
-      patternScale,
-      originX,
-      originY,
-    ]))
-    return pattern
+    pattern = c.createPattern(patternCanvas, 'repeat')!
+    patternScale /= s
   }
-  return color
+
+  // Re-center the pattern near the origin so the shaders don't run out of precision
+  originX /= 64 * patternScale * ratio
+  originX -= Math.floor(originX)
+  originX *= 64 * patternScale * ratio
+
+  pattern.setTransform(new DOMMatrix([
+    patternScale,
+    0,
+    0,
+    patternScale,
+    originX,
+    originY,
+  ]))
+  return pattern
 }
 
 export function cssBackgroundForInputPath(
   colorMapping: ColorMapping,
   inputPath: string,
 ): string {
-  const color = colorMapping[inputPath] || otherColor
+  const color = colorMapping[inputPath] || COLOR_FALLBACK
   if (color instanceof Array) {
     return `url('`
       + `data:image/svg+xml,`
@@ -133,72 +122,42 @@ export function cssBackgroundForInputPath(
   return color
 }
 
-export function getColorMapping(metafile: Metafile, color: COLOR): ColorMapping {
+export function getColorMappingGradient(tree: Tree): ColorMapping {
   const colorMapping: ColorMapping = {}
-
-  const outputs = metafile.outputs
-  const root: TreeNodeInProgress = { text: '', id: '', size: 0, childrenMap: {} }
-
-  // For each output file
-  for (const o in outputs) {
-    if (isSourceMapPath(o))
-      continue
-
-    const output = outputs[o]
-    const inputs = output.inputs
-
-    // Accumulate the input files that contributed to this output file
-    for (const i in inputs) {
-      accumulatePath(root, stripDisabledPathPrefix(i), inputs[i].bytesInOutput)
-    }
-  }
-
-  if (color === COLOR.DIRECTORY) {
-    assignColorsByDirectory(colorMapping, root, 0, Math.PI * 2)
-  }
-  else if (color === COLOR.FORMAT) {
-    assignColorsByFormat(colorMapping, root, metafile)
-  }
-
+  assignColorsByDirectory(colorMapping, tree.root, 0, Math.PI * 2)
   return colorMapping
 }
 
 function assignColorsByDirectory(
   colorMapping: ColorMapping,
-  node: TreeNodeInProgress,
+  node: TreeNode,
   startAngle: number,
   sweepAngle: number,
 ): void {
   const totalBytes = node.size
-  const children = node.childrenMap
-  const sorted: TreeNodeInProgress[] = []
-
   colorMapping[node.id] = hueAngleToColor(startAngle + sweepAngle / 2)
 
-  for (const file in children) {
-    sorted.push(children[file])
-  }
-
-  for (const child of sorted.sort(orderChildrenBySize)) {
+  for (const child of node.children) {
     const childSweepAngle = child.size / totalBytes * sweepAngle
     assignColorsByDirectory(colorMapping, child, startAngle, childSweepAngle)
     startAngle += childSweepAngle
   }
 }
 
-export const cjsColor = hueAngleToColor(3.5)
-export const esmColor = hueAngleToColor(1)
-export let otherColor = '#CCC'
-const bothColor = [cjsColor, esmColor] as const
+export const COLOR_FALLBACK = '#CCC'
+
+const COLOR_CJS = hueAngleToColor(3.5)
+const COLOR_ESM = hueAngleToColor(1)
+const COLOR_BOTH = [COLOR_CJS, COLOR_ESM] as const
 
 function colorForFormats(formats: FORMATS): Color {
   if (!formats)
-    return otherColor
+    return COLOR_FALLBACK
   if (formats === FORMATS.CJS)
-    return cjsColor
+    return COLOR_CJS
   if (formats === FORMATS.ESM)
-    return esmColor
-  return bothColor
+    return COLOR_ESM
+  return COLOR_BOTH
 }
 
 export function moduleTypeLabelInputPath(
@@ -206,23 +165,28 @@ export function moduleTypeLabelInputPath(
   inputPath: string,
   prefix: string,
 ): string {
-  const color = colorMapping[inputPath] || otherColor
-  if (color === otherColor)
+  const color = colorMapping[inputPath] || COLOR_FALLBACK
+  if (color === COLOR_FALLBACK)
     return ''
-  if (color === esmColor)
+  if (color === COLOR_ESM)
     return prefix + 'ESM'
-  if (color === cjsColor)
+  if (color === COLOR_CJS)
     return prefix + 'CJS'
   return prefix + 'ESM & CJS'
 }
 
-function assignColorsByFormat(colorMapping: ColorMapping, node: TreeNodeInProgress, metafile: Metafile): FORMATS {
-  const children = node.childrenMap
+export function getColorMappingFormats(tree: Tree, metafile: Metafile): ColorMapping {
+  const colorMapping: ColorMapping = {}
+  assignColorsByFormat(colorMapping, tree.root, metafile)
+  return colorMapping
+}
+
+function assignColorsByFormat(colorMapping: ColorMapping, node: TreeNode, metafile: Metafile): FORMATS {
   let formats: FORMATS | 0 = 0
   let hasChild = false
 
-  for (const file in children) {
-    formats |= assignColorsByFormat(colorMapping, children[file], metafile)
+  for (const child of node.children) {
+    formats |= assignColorsByFormat(colorMapping, child, metafile)
     hasChild = true
   }
 
