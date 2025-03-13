@@ -17,18 +17,17 @@ import {
 } from '../utils/helpers'
 import styles from './sunburst.module.css'
 
-enum CONSTANTS {
-  ANIMATION_DURATION = 350,
-}
+const CONSTANT_ANIMATION_DURATION = 350
 
-enum FLAGS {
+// eslint-disable-next-line no-restricted-syntax
+const enum FLAGS {
   ROOT = 1,
   FILL = 2,
   CHAIN = 4,
   HOVER = 8,
 }
 
-function isParentOf(parent: TreeNode, child: TreeNode | null): boolean {
+function isParentOf(parent: TreeNode<any>, child: TreeNode<any> | null): boolean {
   while (child) {
     if (child === parent)
       return true
@@ -43,7 +42,7 @@ interface Slice {
   sweepAngle_: number
 }
 
-function narrowSlice(root: TreeNode, node: TreeNode, slice: Slice): void {
+function narrowSlice(root: TreeNode<any>, node: TreeNode<any>, slice: Slice): void {
   if (root === node)
     return
 
@@ -68,13 +67,15 @@ function computeRadius(depth: number): number {
   return 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
 }
 
-export interface CreateSunburstOptions {
-  colorMapping?: ColorMapping
+export interface CreateSunburstOptions<T> {
+  colorMapping?: ColorMapping<T>
 }
 
-export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
+export function createSunburst<T>(tree: Tree<T>, options?: CreateSunburstOptions<T>) {
   const {
-    colorMapping = {},
+    colorMapping = {
+      get: () => undefined,
+    },
   } = options || {}
 
   while (tree.root.children.length === 1) {
@@ -84,14 +85,14 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     }
   }
 
-  const events = createNanoEvents<Events>()
+  const events = createNanoEvents<Events<T>>()
   const disposables: (() => void)[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
   let currentNode = tree.root
-  let hoveredNode: TreeNode | null = null
+  let hoveredNode: TreeNode<T> | null = null
 
-  const changeCurrentNode = (node: TreeNode, e: MouseEvent): void => {
+  const changeCurrentNode = (node: TreeNode<T>, e: MouseEvent): void => {
     if (currentNode !== node) {
       currentNode = node
       updateSunburst()
@@ -100,7 +101,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     }
   }
 
-  const changeHoveredNode = (node: TreeNode | null): void => {
+  const changeHoveredNode = (node: TreeNode<T> | null): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
       updateSunburst()
@@ -132,7 +133,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     // slices all merging together into a solid color. So we enforce a
     // minimum slice width of 2px and we also skip drawing slices that
     // have a tail edge less than 1.5px from the previous tail edge.
-    const drawNode = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number => {
+    const drawNode = (node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number => {
       const outerRadius = computeRadius(depth + 1)
       if (outerRadius > centerY)
         return prevTailEdge // Don't draw slices that fall outside the canvas bounds
@@ -151,7 +152,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
 
       // Handle the fill
       if (flags & FLAGS.FILL) {
-        c.fillStyle = canvasFillStyleForInputPath(colorMapping, c, node.id, centerX, centerY, 1)
+        c.fillStyle = canvasFillStyleForInputPath(colorMapping.get(node), c, centerX, centerY, 1)
         c.beginPath()
         c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
         c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
@@ -233,8 +234,8 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     let animatedStartAngle = sourceStartAngle
     let animatedSweepAngle = sourceSweepAngle
 
-    const hitTestNode = (mouseEvent: MouseEvent): TreeNode | null => {
-      const visit = (node: TreeNode, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode | null => {
+    const hitTestNode = (mouseEvent: MouseEvent): TreeNode<T> | null => {
+      const visit = (node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | null => {
         const outerRadius = computeRadius(depth + 1)
         if (outerRadius > centerY)
           return null // Don't draw slices that fall outside the canvas bounds
@@ -281,7 +282,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
     }
 
     const tick = (): void => {
-      let t = (now() - animationStart) / CONSTANTS.ANIMATION_DURATION
+      let t = (now() - animationStart) / CONSTANT_ANIMATION_DURATION
 
       if (t < 0 || t > 1) {
         t = 1
@@ -311,8 +312,8 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       draw()
     }
 
-    let previousHoveredNode: TreeNode | null = null
-    let historyStack: TreeNode[] = []
+    let previousHoveredNode: TreeNode<T> | null = null
+    let historyStack: TreeNode<T>[] = []
 
     const handleMouseMove = (e: MouseEvent): void => {
       const node = hitTestNode(e)
@@ -349,7 +350,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
         return
       events.emit('click', node, e)
 
-      let stack: TreeNode[] = []
+      let stack: TreeNode<T>[] = []
 
       // Handle clicking in the middle node
       if (node !== animatedNode.parent) {
@@ -503,7 +504,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
         rowEl.append(sizeEl)
 
         const barEl = document.createElement('div')
-        const bgColor = cssBackgroundForInputPath(colorMapping, child.id)
+        const bgColor = cssBackgroundForInputPath(colorMapping.get(child))
         barEl.className = styles.bar + (child.size ? '' : ' ' + styles.empty)
         barEl.style.background = bgColor
         barEl.style.width = 100 * child.size / maxBytesInOutput + '%'
@@ -542,7 +543,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       segmentsEl.className = styles.segments
       directoryEl.append(segmentsEl)
 
-      for (let node: TreeNode | null = currentNode; node; node = node.parent) {
+      for (let node: TreeNode<T> | null = currentNode; node; node = node.parent) {
         let text = node.id || '/'
         const nodeEl = document.createElement('a')
         if (node.parent)
@@ -576,10 +577,10 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
       detailsEl.append(directoryEl, barsEl)
     }
 
-    let generatedNodes: (TreeNode | null)[] = []
+    let generatedNodes: (TreeNode<T> | null)[] = []
     let generatedRows: HTMLAnchorElement[] = []
     let previousNode = currentNode
-    let previousHoveredNode: TreeNode | null = null
+    let previousHoveredNode: TreeNode<T> | null = null
     let previousHoveredElement: HTMLAnchorElement | null = null
 
     detailsEl.className = styles.details
@@ -600,7 +601,7 @@ export function createSunburst(tree: Tree, options?: CreateSunburstOptions) {
           previousHoveredElement = null
         }
 
-        for (let node: TreeNode | null = hoveredNode; node; node = node.parent) {
+        for (let node: TreeNode<T> | null = hoveredNode; node; node = node.parent) {
           const index = generatedNodes.indexOf(node)
           if (index >= 0) {
             previousHoveredElement = generatedRows[index]

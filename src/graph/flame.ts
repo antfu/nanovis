@@ -5,7 +5,6 @@ import type {
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
-  COLOR_FALLBACK,
 } from '../utils/color'
 import {
   now,
@@ -15,29 +14,30 @@ import {
   useWheelEventListener,
 } from '../utils/helpers'
 
-enum CONSTANTS {
-  MARGIN = 50,
-  ROW_HEIGHT = 24,
-  TEXT_INDENT = 5,
-  DOT_CHAR_CODE = 46,
-  ZOOMED_OUT_WIDTH = 1000,
-}
+const CONSTANT_MARGIN = 50
+const CONSTANT_ROW_HEIGHT = 24
+const CONSTANT_TEXT_INDENT = 5
+const CONSTANT_DOT_CHAR_CODE = 46
+const CONSTANT_ZOOMED_OUT_WIDTH = 1000
 
-enum FLAGS {
+// eslint-disable-next-line no-restricted-syntax
+const enum FLAGS {
   OUTPUT = 1,
   HOVER = 2,
 }
 
-export interface CreateFlameOptions {
-  colorMapping?: ColorMapping
+export interface CreateFlameOptions<T> {
+  colorMapping?: ColorMapping<T>
 }
 
-export function createFlame(tree: Tree, options?: CreateFlameOptions) {
+export function createFlame<T>(tree: Tree<T>, options?: CreateFlameOptions<T>) {
   const {
-    colorMapping = {},
+    colorMapping = {
+      get: () => undefined,
+    },
   } = options || {}
 
-  const events = createNanoEvents<Events>()
+  const events = createNanoEvents<Events<T>>()
   const disposables: (() => void)[] = []
   const totalBytes = tree.root.size
   let viewportMin = 0
@@ -54,14 +54,14 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
   let prevWheelWasZoom = false
   let stripeScaleAdjust = 1
   let animationFrame: number | null = null
-  let hoveredNode: TreeNode | null = null
+  let hoveredNode: TreeNode<T> | null = null
   let fgOnColor = ''
   const normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
   const boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
   let ellipsisWidth = 0
   let currentWidthCache: Record<number, number> = normalWidthCache
 
-  const changeHoveredNode = (node: TreeNode | null, e: MouseEvent): void => {
+  const changeHoveredNode = (node: TreeNode<T> | null, e: MouseEvent): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
       canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
@@ -83,10 +83,10 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
   const resize = (): void => {
     const ratio = window.devicePixelRatio || 1
-    width = componentEl.clientWidth + 2 * CONSTANTS.MARGIN
-    height = tree.maxDepth * CONSTANTS.ROW_HEIGHT + 1
-    zoomedOutMin = (width - CONSTANTS.ZOOMED_OUT_WIDTH) >> 1
-    zoomedOutWidth = zoomedOutMin + CONSTANTS.ZOOMED_OUT_WIDTH
+    width = componentEl.clientWidth + 2 * CONSTANT_MARGIN
+    height = tree.maxDepth * CONSTANT_ROW_HEIGHT + 1
+    zoomedOutMin = (width - CONSTANT_ZOOMED_OUT_WIDTH) >> 1
+    zoomedOutWidth = zoomedOutMin + CONSTANT_ZOOMED_OUT_WIDTH
     if (zoomedOutMin < 0)
       zoomedOutMin = 0
     if (zoomedOutWidth > width)
@@ -119,7 +119,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
   // rectangles all merging together into a solid color. So we enforce a
   // minimum rectangle width of 2px and we also skip drawing rectangles that
   // have a right edge less than 1.5px from the previous right edge.
-  const drawNode = (node: TreeNode, y: number, startBytes: number, prevRightEdge: number, flags: FLAGS): number => {
+  const drawNode = (node: TreeNode<T>, y: number, startBytes: number, prevRightEdge: number, flags: FLAGS): number => {
     const scale = zoomedOutWidth / (viewportMax - viewportMin)
     const x = zoomedOutMin + (startBytes - viewportMin) * scale
     const w = node.size * scale
@@ -130,16 +130,14 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
       return rightEdge
 
     const rectWidth = w < 2 ? 2 : w
-    const textX = (x > 0 ? x : 0) + CONSTANTS.TEXT_INDENT
-    const textY = y + CONSTANTS.ROW_HEIGHT / 2
+    const textX = (x > 0 ? x : 0) + CONSTANT_TEXT_INDENT
+    const textY = y + CONSTANT_ROW_HEIGHT / 2
     let nameText = ''
     let sizeText = ''
     let measuredW: number
     let typesetX = 0
     const typesetW = w + x - textX
-    const fillColor = node.id
-      ? canvasFillStyleForInputPath(colorMapping, c, node.id, zoomedOutMin - viewportMin * scale, CONSTANTS.ROW_HEIGHT, scale * stripeScaleAdjust)
-      : COLOR_FALLBACK
+    const fillColor = canvasFillStyleForInputPath(colorMapping.get(node), c, zoomedOutMin - viewportMin * scale, CONSTANT_ROW_HEIGHT, scale * stripeScaleAdjust)
     let textColor = 'black'
     let childRightEdge = -Infinity
 
@@ -147,16 +145,16 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
       textColor = fgOnColor
       c.font = boldFont
       currentWidthCache = boldWidthCache
-      ellipsisWidth = 3 * charCodeWidth(CONSTANTS.DOT_CHAR_CODE)
+      ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
     }
     else {
       c.fillStyle = fillColor
-      c.fillRect(x, y, rectWidth, CONSTANTS.ROW_HEIGHT)
+      c.fillRect(x, y, rectWidth, CONSTANT_ROW_HEIGHT)
 
       // Draw the hover highlight
       if ((flags & FLAGS.HOVER) || (hoveredNode && node.id === hoveredNode.id)) {
         c.fillStyle = 'rgba(255, 255, 255, 0.3)'
-        c.fillRect(x, y, rectWidth, CONSTANTS.ROW_HEIGHT)
+        c.fillRect(x, y, rectWidth, CONSTANT_ROW_HEIGHT)
         flags |= FLAGS.HOVER
       }
     }
@@ -180,7 +178,7 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
     if (flags & FLAGS.OUTPUT) {
       c.font = normalFont
       currentWidthCache = normalWidthCache
-      ellipsisWidth = 3 * charCodeWidth(CONSTANTS.DOT_CHAR_CODE)
+      ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
     }
 
     // Typeset the node size
@@ -197,14 +195,14 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
 
     // Draw the children
     for (const child of node.children) {
-      childRightEdge = drawNode(child, y + CONSTANTS.ROW_HEIGHT, startBytes, childRightEdge, flags & ~FLAGS.OUTPUT)
+      childRightEdge = drawNode(child, y + CONSTANT_ROW_HEIGHT, startBytes, childRightEdge, flags & ~FLAGS.OUTPUT)
       startBytes += child.size
     }
 
     // Draw the outline
     if (!(flags & FLAGS.OUTPUT)) {
       // Note: The stroke deliberately overlaps the right and bottom edges
-      strokeRectWithFirefoxBugWorkaround(c, '#222', x + 0.5, y + 0.5, rectWidth, CONSTANTS.ROW_HEIGHT)
+      strokeRectWithFirefoxBugWorkaround(c, '#222', x + 0.5, y + 0.5, rectWidth, CONSTANT_ROW_HEIGHT)
     }
 
     return rightEdge
@@ -231,16 +229,16 @@ export function createFlame(tree: Tree, options?: CreateFlameOptions) {
       animationFrame = requestAnimationFrame(draw)
   }
 
-  const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): TreeNode | null => {
-    const visit = (node: TreeNode, y: number, startBytes: number): TreeNode | null => {
+  const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null => {
+    const visit = (node: TreeNode<T>, y: number, startBytes: number): TreeNode<T> | null => {
       if (mouseBytes >= startBytes && mouseBytes < startBytes + node.size) {
-        if (mouseY >= y && mouseY < y + CONSTANTS.ROW_HEIGHT && node.id) {
+        if (mouseY >= y && mouseY < y + CONSTANT_ROW_HEIGHT && node.id) {
           return node
         }
 
-        if (mouseY >= y + CONSTANTS.ROW_HEIGHT) {
+        if (mouseY >= y + CONSTANT_ROW_HEIGHT) {
           for (const child of node.children) {
-            const result = visit(child, y + CONSTANTS.ROW_HEIGHT, startBytes)
+            const result = visit(child, y + CONSTANT_ROW_HEIGHT, startBytes)
             if (result)
               return result
             startBytes += child.size

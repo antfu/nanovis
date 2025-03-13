@@ -1,13 +1,13 @@
 /* eslint-disable no-console */
 import type { Metafile } from '../../src/esbuild/metafile'
 import { createFlame, createSunburst, createTreemap } from '../../src'
-import { analyzeDirectoryTree } from '../../src/esbuild/metafile-to-tree'
+import { esbuildMetafileToTree } from '../../src/esbuild/metafile-to-tree'
 import { getColorMappingGradient } from '../../src/utils/color'
 import data from '../esbuild-github-io-analyze-example-metafile.json'
 import './index.css'
 
 const metafile = data as Metafile
-const tree = analyzeDirectoryTree(metafile)
+const tree = esbuildMetafileToTree(metafile)
 const colorMapping = getColorMappingGradient(tree)
 const treemap = createTreemap(tree, { colorMapping })
 treemap.events.on('click', (node, e) => {

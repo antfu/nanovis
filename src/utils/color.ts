@@ -1,6 +1,12 @@
 import type { Metafile } from '../esbuild/metafile'
 import type { Tree, TreeNode } from '../types/tree'
 
+export type ColorValue = string | readonly [string, string]
+export type ColorMapPlain = Record<string, ColorValue>
+export interface ColorMapping<T> {
+  get: (node: TreeNode<T>) => ColorValue | undefined
+}
+
 export function hueAngleToColor(hueAngle: number): string {
   const saturation = 0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))
   const lightness = 0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))
@@ -20,18 +26,14 @@ const patternContext = patternCanvas.getContext('2d')!
 let patternScale = 1
 let pattern: CanvasPattern
 
-export type Color = string | readonly [string, string]
-export type ColorMapping = Record<string, Color>
-
 export function canvasFillStyleForInputPath(
-  colorMapping: ColorMapping,
+  color: ColorValue | undefined,
   c: CanvasRenderingContext2D,
-  inputPath: string,
   originX: number,
   originY: number,
   scale: number,
 ): string | CanvasPattern {
-  const color = colorMapping[inputPath] || COLOR_FALLBACK
+  color ||= COLOR_FALLBACK
   if (!Array.isArray(color))
     return color as string
 
@@ -104,11 +106,10 @@ export function canvasFillStyleForInputPath(
 }
 
 export function cssBackgroundForInputPath(
-  colorMapping: ColorMapping,
-  inputPath: string,
+  color: ColorValue | undefined,
 ): string {
-  const color = colorMapping[inputPath] || COLOR_FALLBACK
-  if (color instanceof Array) {
+  color ||= COLOR_FALLBACK
+  if (Array.isArray(color)) {
     return `url('`
       + `data:image/svg+xml,`
       + `<svg width="26" height="26" xmlns="http://www.w3.org/2000/svg">`
@@ -119,18 +120,24 @@ export function cssBackgroundForInputPath(
       + `</svg>`
       + `')`
   }
-  return color
+  return color as string
 }
 
-export function getColorMappingGradient(tree: Tree): ColorMapping {
-  const colorMapping: ColorMapping = {}
+export function createColorMappingFromPlain<T>(plain: ColorMapPlain): ColorMapping<T> {
+  return {
+    get: (node: TreeNode<T>) => node.id ? plain[node.id] : undefined,
+  }
+}
+
+export function getColorMappingGradient<T>(tree: Tree<T>): ColorMapping<T> {
+  const colorMapping: ColorMapPlain = {}
   assignColorsByDirectory(colorMapping, tree.root, 0, Math.PI * 2)
-  return colorMapping
+  return createColorMappingFromPlain(colorMapping)
 }
 
-function assignColorsByDirectory(
-  colorMapping: ColorMapping,
-  node: TreeNode,
+function assignColorsByDirectory<T>(
+  colorMapping: ColorMapPlain,
+  node: TreeNode<T>,
   startAngle: number,
   sweepAngle: number,
 ): void {
@@ -150,7 +157,7 @@ const COLOR_CJS = hueAngleToColor(3.5)
 const COLOR_ESM = hueAngleToColor(1)
 const COLOR_BOTH = [COLOR_CJS, COLOR_ESM] as const
 
-function colorForFormats(formats: FORMATS): Color {
+function colorForFormats(formats: FORMATS): ColorValue {
   if (!formats)
     return COLOR_FALLBACK
   if (formats === FORMATS.CJS)
@@ -161,11 +168,10 @@ function colorForFormats(formats: FORMATS): Color {
 }
 
 export function moduleTypeLabelInputPath(
-  colorMapping: ColorMapping,
-  inputPath: string,
+  color: ColorValue | undefined,
   prefix: string,
 ): string {
-  const color = colorMapping[inputPath] || COLOR_FALLBACK
+  color ||= COLOR_FALLBACK
   if (color === COLOR_FALLBACK)
     return ''
   if (color === COLOR_ESM)
@@ -175,13 +181,14 @@ export function moduleTypeLabelInputPath(
   return prefix + 'ESM & CJS'
 }
 
-export function getColorMappingFormats(tree: Tree, metafile: Metafile): ColorMapping {
-  const colorMapping: ColorMapping = {}
+export function getColorMappingFormats<T>(tree: Tree<T>, metafile: Metafile): ColorMapping<T> {
+  const colorMapping: ColorMapPlain = {}
   assignColorsByFormat(colorMapping, tree.root, metafile)
-  return colorMapping
+  // TODO: make it on-demand
+  return createColorMappingFromPlain(colorMapping)
 }
 
-function assignColorsByFormat(colorMapping: ColorMapping, node: TreeNode, metafile: Metafile): FORMATS {
+function assignColorsByFormat<T>(colorMapping: ColorMapPlain, node: TreeNode<T>, metafile: Metafile): FORMATS {
   let formats: FORMATS | 0 = 0
   let hasChild = false
 

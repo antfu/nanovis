@@ -3,15 +3,15 @@ import type { Metafile } from './metafile'
 import { bytesToText, hasOwnProperty } from '../utils/helpers'
 import { commonPrefixFinder, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from './helpers'
 
-export function analyzeDirectoryTree(metafile: Metafile): Tree {
+export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
   const outputs = metafile.outputs
-  const nodes: TreeNode[] = []
+  const nodes: TreeNode<T>[] = []
   let commonPrefix: string[] | undefined
   const root: TreeNodeInProgress = { text: '', id: '', size: 0, childrenMap: {} }
 
-  const sortChildren = (node: TreeNodeInProgress, isOutputFile: boolean): TreeNode => {
+  const sortChildren = (node: TreeNodeInProgress, isOutputFile: boolean): TreeNode<T> => {
     const children = node.childrenMap
-    const sorted: TreeNode[] = []
+    const sorted: TreeNode<T>[] = []
     for (const file in children) {
       sorted.push(sortChildren(children[file], false))
     }
@@ -26,7 +26,7 @@ export function analyzeDirectoryTree(metafile: Metafile): Tree {
     }
   }
 
-  const setParents = (node: TreeNode, depth: number): number => {
+  const setParents = (node: TreeNode<T>, depth: number): number => {
     let maxDepth = 0
     for (const child of node.children) {
       const childDepth = setParents(child, depth + 1)
@@ -133,7 +133,10 @@ export interface TreeNodeInProgress {
   childrenMap: Record<string, TreeNodeInProgress>
 }
 
-export function orderChildrenBySize(a: Pick<TreeNode, 'size' | 'id'>, b: Pick<TreeNode, 'size' | 'id'>): number {
+export function orderChildrenBySize(
+  a: { size: number, id: string },
+  b: { size: number, id: string },
+): number {
   return b.size - a.size || +(a.id > b.id) - +(a.id < b.id)
 }
 
