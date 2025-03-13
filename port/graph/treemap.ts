@@ -1,13 +1,13 @@
 import type {
-  ColorMapping} from './color';
-import type { Metafile } from './metafile'
-import type { TreeNodeInProgress} from './tree';
+  ColorMapping} from '../color';
+import type { Metafile } from '../metafile'
+import type { TreeNodeInProgress} from '../tree';
 import { createNanoEvents } from 'nanoevents'
 import {
   canvasFillStyleForInputPath,
   COLOR,
   moduleTypeLabelInputPath,
-} from './color'
+} from '../color'
 import {
   bytesToText,
   commonPrefixFinder,
@@ -22,8 +22,8 @@ import {
   useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
-} from './helpers'
-import { accumulatePath, orderChildrenBySize } from './tree'
+} from '../helpers'
+import { accumulatePath, orderChildrenBySize } from '../tree'
 import styles from './treemap.module.css'
 
 export interface Events {

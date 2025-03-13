@@ -1,14 +1,13 @@
-import type {
-  ColorMapping} from './color';
-import type { Metafile } from './metafile'
-import type { TreeNodeInProgress } from './tree';
+import type { ColorMapping} from '../color';
+import type { Metafile } from '../metafile'
+import type { TreeNodeInProgress } from '../tree';
 import { createNanoEvents } from 'nanoevents';
 import {
   canvasFillStyleForInputPath,
   COLOR,
   cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
-} from './color'
+} from '../color'
 import {
   bytesToText,
   isSourceMapPath,
@@ -20,14 +19,12 @@ import {
   useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
-} from './helpers'
-import indexStyles from './index.module.css'
+} from '../helpers'
+import { accumulatePath, orderChildrenBySize } from '../tree'
 import styles from './sunburst.module.css'
-import { accumulatePath, orderChildrenBySize } from './tree'
-// import { isWhyFileVisible, showWhyFile } from './whyfile'
 
 export interface Events {
-  hover: (node: TreeNode | null, e: MouseEvent) => void
+  hover: (node: TreeNode | null, e?: MouseEvent) => void
   click: (node: TreeNode, e: MouseEvent) => void
 }
 
@@ -382,18 +379,18 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
       draw()
     }
 
-    const tooltipEl = document.createElement('div')
+    // const tooltipEl = document.createElement('div')
 
-    const showTooltip = (x: number, y: number, html: string): void => {
-      tooltipEl.style.display = 'block'
-      tooltipEl.style.left = x + 'px'
-      tooltipEl.style.top = y + 'px'
-      tooltipEl.innerHTML = html
-    }
+    // const showTooltip = (x: number, y: number, html: string): void => {
+    //   tooltipEl.style.display = 'block'
+    //   tooltipEl.style.left = x + 'px'
+    //   tooltipEl.style.top = y + 'px'
+    //   tooltipEl.innerHTML = html
+    // }
 
-    const hideTooltip = (): void => {
-      tooltipEl.style.display = 'none'
-    }
+    // const hideTooltip = (): void => {
+    //   tooltipEl.style.display = 'none'
+    // }
 
     let previousHoveredNode: TreeNode | null = null
     let historyStack: TreeNode[] = []
@@ -404,19 +401,21 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
 
       // Show a tooltip for hovered nodes
       if (node && node !== animatedNode.parent_) {
-        let tooltip = node.inputPath_
-        if (node.parent_ && node.parent_.inputPath_ !== '') {
-          const i = node.parent_.inputPath_.length
-          tooltip = textToHTML(tooltip.slice(0, i)) + '<b>' + textToHTML(tooltip.slice(i)) + '</b>'
-        } else {
-          tooltip = '<b>' + textToHTML(shortenDataURLForDisplay(tooltip)) + '</b>'
-        }
-        if (colorMode === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
-        else tooltip += ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
-        showTooltip(e.pageX, e.pageY + 20, tooltip)
+        // let tooltip = node.inputPath_
+        // if (node.parent_ && node.parent_.inputPath_ !== '') {
+        //   const i = node.parent_.inputPath_.length
+        //   tooltip = textToHTML(tooltip.slice(0, i)) + '<b>' + textToHTML(tooltip.slice(i)) + '</b>'
+        // } else {
+        //   tooltip = '<b>' + textToHTML(shortenDataURLForDisplay(tooltip)) + '</b>'
+        // }
+        // if (colorMode === COLOR.FORMAT) tooltip += textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
+        // else tooltip += ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
+        // showTooltip(e.pageX, e.pageY + 20, tooltip)
+        events.emit('hover', node, e)
         canvas.style.cursor = 'pointer'
       } else {
-        hideTooltip()
+        events.emit('hover', null, e)
+        // hideTooltip()
       }
     }
 
@@ -430,15 +429,17 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
       handleMouseMove(e)
     }
 
-    canvas.onmouseout = () => {
+    canvas.onmouseout = (e) => {
       changeHoveredNode(null)
-      hideTooltip()
+      // hideTooltip() 
+      events.emit('hover', null, e)
     }
 
     canvas.onclick = e => {
       let node = hitTestNode(e)
       if (!node) return
-      hideTooltip()
+      // hideTooltip()
+      events.emit('click', node, e)
 
       let stack: TreeNode[] = []
 
@@ -462,15 +463,15 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
 
     leftEl.className = styles.left
     leftEl.append(canvas)
-    tooltipEl.className = indexStyles.tooltip
-    mainEl.append(tooltipEl, leftEl)
+    mainEl.append(leftEl)
 
     return [draw, () => {
       if (previousHoveredNode !== hoveredNode) {
         previousHoveredNode = hoveredNode
         if (!hoveredNode) {
           canvas.style.cursor = 'auto'
-          hideTooltip()
+          // hideTooltip()
+          events.emit('hover', null)
         }
         if (animationFrame === null) animationFrame = requestAnimationFrame(tick)
       }

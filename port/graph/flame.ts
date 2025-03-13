@@ -1,15 +1,14 @@
 import type {
-  ColorMapping} from './color';
-import type { Metafile } from './metafile'
-import type { TreeNodeInProgress } from './tree';
+  ColorMapping} from '../color';
+import type { Metafile } from '../metafile'
+import type { TreeNodeInProgress } from '../tree';
 import { createNanoEvents } from 'nanoevents';
 import {
   canvasFillStyleForInputPath,
   COLOR,
   moduleTypeLabelInputPath,
   otherColor,
-} from './color'
-import styles from './flame.module.css'
+} from '../color'
 import {
   bytesToText,
   commonPrefixFinder,
@@ -23,8 +22,9 @@ import {
   useDarkModeListener,
   useResizeEventListener,
   useWheelEventListener,
-} from './helpers'
-import { accumulatePath, orderChildrenBySize } from './tree'
+} from '../helpers'
+import { accumulatePath, orderChildrenBySize } from '../tree'
+import styles from './flame.module.css'
 // import { isWhyFileVisible, showWhyFile } from './whyfile'
 
 export interface Events {
