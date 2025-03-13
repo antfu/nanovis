@@ -215,27 +215,23 @@ export function nodeModulesPackagePathOrNull (path: string): string | null {
 export let lastInteractionWasKeyboard = false
 
 const darkMode = matchMedia("(prefers-color-scheme: dark)")
-const darkModeDidChange = () => darkModeListener && darkModeListener()
-let wheelEventListener: ((e: WheelEvent) => void) | null = null
-let resizeEventListener: (() => void) | null = null
-export let darkModeListener: (() => void) | null = null
+export function useWheelEventListener (listener: ((e: WheelEvent) => void)) {
+  window.addEventListener('wheel', listener, { passive: false })
+  return () => window.removeEventListener('wheel', listener)
+}
+export function useResizeEventListener (listener: () => void) {
+  window.addEventListener('resize', listener)
+  return () => window.removeEventListener('resize', listener)
+}
+export function useDarkModeListener (listener: () => void) {
+  darkMode.addEventListener("change", listener)
+  return () => darkMode.removeEventListener("change", listener)
+}
 
-export const setWheelEventListener = (listener: ((e: WheelEvent) => void) | null) => wheelEventListener = listener
-export const setResizeEventListener = (listener: () => void) => resizeEventListener = listener
-export const setDarkModeListener = (listener: () => void) => darkModeListener = listener
 
 // Only do certain keyboard accessibility stuff if the user is interacting with the keyboard
 document.addEventListener('keydown', () => lastInteractionWasKeyboard = true, { capture: true })
 document.addEventListener('mousedown', () => lastInteractionWasKeyboard = false, { capture: true })
-
-// Register event listeners as singletons so we don't need to worry about their lifetimes
-window.addEventListener('wheel', e => wheelEventListener && wheelEventListener(e), { passive: false })
-window.addEventListener('resize', () => resizeEventListener && resizeEventListener())
-try {
-  darkMode.addEventListener("change", darkModeDidChange)
-} catch {
-  darkMode.addListener(darkModeDidChange)
-}
 
 // Handle the case where this API doesn't exist
 try {

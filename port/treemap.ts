@@ -19,6 +19,9 @@ import {
   splitPathBySlash,
   stripDisabledPathPrefix,
   strokeRectWithFirefoxBugWorkaround,
+  useDarkModeListener,
+  useResizeEventListener,
+  useWheelEventListener,
 } from './helpers'
 import { accumulatePath, orderChildrenBySize } from './tree'
 import styles from './treemap.module.css'
@@ -265,6 +268,7 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   } = options || {}
 
   const events = createNanoEvents<Events>()
+  const disposables: (()=>void)[] = []
   let layoutNodes: NodeLayout[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
@@ -687,16 +691,10 @@ export function createTreemap(tree: Tree, options?: TreemapOptions) {
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
   
-  const disposables: (()=>void)[] = []
 
-  window.addEventListener('wheel', updateHover)
-  window.addEventListener('resize', resize)
-
-  disposables.push(() => window.removeEventListener('wheel', updateHover))
-  disposables.push(() => window.removeEventListener('resize', resize))
-  // setDarkModeListener(draw)
-  // setAfterColorMappingUpdate(draw)
-  // setResizeEventListener(resize)
+  disposables.push(useWheelEventListener(updateHover))
+  disposables.push(useResizeEventListener(resize))
+  disposables.push(useDarkModeListener(draw))
 
   function dispose() {
     disposables.forEach(d => d())

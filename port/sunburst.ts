@@ -2,29 +2,35 @@ import type {
   ColorMapping} from './color';
 import type { Metafile } from './metafile'
 import type { TreeNodeInProgress } from './tree';
+import { createNanoEvents } from 'nanoevents';
 import {
   canvasFillStyleForInputPath,
   COLOR,
   cssBackgroundForInputPath,
   moduleTypeLabelInputPath,
-  // setAfterColorMappingUpdate,
 } from './color'
 import {
   bytesToText,
   isSourceMapPath,
   lastInteractionWasKeyboard,
   now,
-  setDarkModeListener,
-  setResizeEventListener,
-  setWheelEventListener,
   shortenDataURLForDisplay,
   stripDisabledPathPrefix,
   textToHTML,
+  useDarkModeListener,
+  useResizeEventListener,
+  useWheelEventListener,
 } from './helpers'
 import indexStyles from './index.module.css'
 import styles from './sunburst.module.css'
 import { accumulatePath, orderChildrenBySize } from './tree'
-import { isWhyFileVisible, showWhyFile } from './whyfile'
+// import { isWhyFileVisible, showWhyFile } from './whyfile'
+
+export interface Events {
+  hover: (node: TreeNode | null, e: MouseEvent) => void
+  click: (node: TreeNode, e: MouseEvent) => void
+}
+
 
 enum CONSTANTS {
   ANIMATION_DURATION = 350,
@@ -158,17 +164,20 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     colorMode = COLOR.DIRECTORY,
   } = options || {}
   
+  const events = createNanoEvents<Events>() 
+  const disposables: (() => void)[] = []
   const componentEl = document.createElement('div')
   const mainEl = document.createElement('main')
   const tree = analyzeDirectoryTree(metafile)
   let currentNode = tree.root_
   let hoveredNode: TreeNode | null = null
 
-  const changeCurrentNode = (node: TreeNode): void => {
+  const changeCurrentNode = (node: TreeNode, e:MouseEvent): void => {
     if (currentNode !== node) {
       currentNode = node
       updateSunburst()
       updateDetails()
+      events.emit('click', node, e)
     }
   }
 
@@ -412,13 +421,10 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     }
 
     resize()
-    setDarkModeListener(draw)
-    setResizeEventListener(resize)
 
-    setWheelEventListener(e => {
-      if (isWhyFileVisible()) return
-      handleMouseMove(e)
-    })
+    disposables.push(useDarkModeListener(draw))
+    disposables.push(useResizeEventListener(resize))
+    disposables.push(useWheelEventListener(handleMouseMove))
 
     canvas.onmousemove = e => {
       handleMouseMove(e)
@@ -445,11 +451,12 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
       }
 
       if (node.sortedChildren_.length > 0) {
-        changeCurrentNode(node)
+        changeCurrentNode(node,e)
         historyStack = stack
       } else {
         e.preventDefault() // Prevent the browser from removing the focus on the dialog
-        showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
+        events.emit('click', node, e)
+        // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
       }
     }
 
@@ -552,8 +559,8 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
         // Use a link so we get keyboard support
         rowEl.href = 'javascript:void 0'
         nameEl.textContent = '../'
-        rowEl.onclick = () => {
-          changeCurrentNode(parent!)
+        rowEl.onclick = (e) => {
+          changeCurrentNode(parent!, e)
           if (lastInteractionWasKeyboard && generatedRows.length > 0) {
             generatedRows[0].focus()
           }
@@ -599,12 +606,13 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
         rowEl.onclick = e => {
           e.preventDefault() // Prevent meta+click from opening a new tab
           if (child.sortedChildren_.length > 0) {
-            changeCurrentNode(child)
+            changeCurrentNode(child, e)
             if (lastInteractionWasKeyboard && generatedRows.length > 0) {
               generatedRows[0].focus()
             }
           } else {
-            showWhyFile(metafile, child.inputPath_, child.bytesInOutput_)
+            events.emit('click', child, e)
+            // showWhyFile(metafile, child.inputPath_, child.bytesInOutput_)
           }
         }
         rowEl.onfocus = rowEl.onmouseover = () => changeHoveredNode(child)
@@ -630,7 +638,7 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
           nodeEl.href = 'javascript:void 0'
           nodeEl.onclick = e => {
             e.preventDefault() // Prevent meta+click from opening a new tab
-            changeCurrentNode(node!)
+            changeCurrentNode(node!, e)
             if (lastInteractionWasKeyboard && generatedRows.length > 0) {
               // Don't focus the no-op element if it's present
               generatedRows[!generatedNodes[0] && generatedRows.length > 1 ? 1 : 0].focus()
@@ -697,11 +705,18 @@ export function createSunburst (metafile: Metafile, options?: CreateSunburstOpti
     redrawSunburst()
     regenerateDetails()
   }
+  
+  function dispose() {
+    disposables.forEach(d => d())
+    disposables.length = 0
+  }
 
   componentEl.id = styles.sunburstPanel
   componentEl.append(mainEl)
   return {
+    events,
     el: componentEl,
     draw, 
+    dispose,
   }
 }

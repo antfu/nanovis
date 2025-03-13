@@ -2,6 +2,7 @@ import type {
   ColorMapping} from './color';
 import type { Metafile } from './metafile'
 import type { TreeNodeInProgress } from './tree';
+import { createNanoEvents } from 'nanoevents';
 import {
   canvasFillStyleForInputPath,
   COLOR,
@@ -14,18 +15,22 @@ import {
   commonPrefixFinder,
   isSourceMapPath,
   now,
-  setDarkModeListener,
-  setResizeEventListener,
-  setWheelEventListener,
-  shortenDataURLForDisplay,
+  // shortenDataURLForDisplay,
   splitPathBySlash,
   stripDisabledPathPrefix,
   strokeRectWithFirefoxBugWorkaround,
-  textToHTML,
+  // textToHTML,
+  useDarkModeListener,
+  useResizeEventListener,
+  useWheelEventListener,
 } from './helpers'
-import indexStyles from './index.module.css'
 import { accumulatePath, orderChildrenBySize } from './tree'
-import { isWhyFileVisible, showWhyFile } from './whyfile'
+// import { isWhyFileVisible, showWhyFile } from './whyfile'
+
+export interface Events {
+  hover: (node: TreeNode | null, e: MouseEvent) => void
+  click: (node: TreeNode, e: MouseEvent) => void
+}
 
 enum CONSTANTS {
   MARGIN = 50,
@@ -172,6 +177,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     colorMode = COLOR.DIRECTORY,
   } = options || {}
 
+  const events = createNanoEvents<Events>()
+  const disposables: (() => void)[] = []
   const tree = analyzeDirectoryTree(metafile)
   const totalBytes = tree.root_.bytesInOutput_
   let viewportMin = 0
@@ -195,11 +202,13 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
   let ellipsisWidth = 0
   let currentWidthCache: Record<number, number> = normalWidthCache
 
-  const changeHoveredNode = (node: TreeNode | null): void => {
+  const changeHoveredNode = (node: TreeNode | null, e: MouseEvent): void => {
     if (hoveredNode !== node) {
       hoveredNode = node
       canvas.style.cursor = node && !node.sortedChildren_.length ? 'pointer' : 'auto'
-      if (!node) hideTooltip()
+      if (!node) {
+        events.emit('hover', null, e)
+      }
       invalidate()
     }
   }
@@ -356,27 +365,27 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     if (animationFrame === null) animationFrame = requestAnimationFrame(draw)
   }
 
-  const tooltipEl = document.createElement('div')
+  // const tooltipEl = document.createElement('div')
 
-  const showTooltip = (x: number, y: number, html: string): void => {
-    tooltipEl.style.display = 'block'
-    tooltipEl.style.left = x + 'px'
-    tooltipEl.style.top = y + 'px'
-    tooltipEl.innerHTML = html
+  // const showTooltip = (x: number, y: number, html: string): void => {
+  //   tooltipEl.style.display = 'block'
+  //   tooltipEl.style.left = x + 'px'
+  //   tooltipEl.style.top = y + 'px'
+  //   tooltipEl.innerHTML = html
 
-    let right = tooltipEl.offsetWidth
-    for (let el: HTMLElement | null = tooltipEl; el; el = el.offsetParent as HTMLElement | null) {
-      right += el.offsetLeft
-    }
+  //   let right = tooltipEl.offsetWidth
+  //   for (let el: HTMLElement | null = tooltipEl; el; el = el.offsetParent as HTMLElement | null) {
+  //     right += el.offsetLeft
+  //   }
 
-    if (right > width) {
-      tooltipEl.style.left = x + width - right + 'px'
-    }
-  }
+  //   if (right > width) {
+  //     tooltipEl.style.left = x + width - right + 'px'
+  //   }
+  // }
 
-  let hideTooltip = (): void => {
-    tooltipEl.style.display = 'none'
-  }
+  // let hideTooltip = (): void => {
+  //   tooltipEl.style.display = 'none'
+  // }
 
   const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): TreeNode | null => {
     const visit = (node: TreeNode, y: number, startBytes: number): TreeNode | null => {
@@ -446,19 +455,21 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
   const updateHover = (e: MouseEvent | WheelEvent): void => {
     const node = hitTestNode(e)
-    changeHoveredNode(node)
+    changeHoveredNode(node, e)
 
     // Show a tooltip for hovered nodes
     if (node) {
-      let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
-      const nameSplit = tooltip.length - node.name_.length
-      tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
-      tooltip += colorMode === COLOR.FORMAT
-        ? textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
-        : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
-      showTooltip(e.pageX, e.pageY + 20, tooltip)
+      events.emit('hover', node, e)
+      // let tooltip = node.name_ === node.inputPath_ ? shortenDataURLForDisplay(node.inputPath_) : node.inputPath_
+      // const nameSplit = tooltip.length - node.name_.length
+      // tooltip = textToHTML(tooltip.slice(0, nameSplit)) + '<b>' + textToHTML(tooltip.slice(nameSplit)) + '</b>'
+      // tooltip += colorMode === COLOR.FORMAT
+      //   ? textToHTML(moduleTypeLabelInputPath(colorMapping, node.inputPath_, ' – '))
+      //   : ' – ' + textToHTML(bytesToText(node.bytesInOutput_))
+      // showTooltip(e.pageX, e.pageY + 20, tooltip)
     } else {
-      hideTooltip()
+      events.emit('hover', null, e)
+      // hideTooltip()
     }
   }
 
@@ -493,8 +504,8 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     updateHover(e)
   }
 
-  canvas.onmouseout = () => {
-    changeHoveredNode(null)
+  canvas.onmouseout = (e) => {
+    changeHoveredNode(null, e)
   }
 
   canvas.onclick = e => {
@@ -502,16 +513,17 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
     if (didDrag) return
 
     const node = hitTestNode(e)
-    changeHoveredNode(node)
+    changeHoveredNode(node, e)
 
     if (node && !node.sortedChildren_.length) {
-      showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
+      events.emit('click', node, e)
+      // showWhyFile(metafile, node.inputPath_, node.bytesInOutput_)
     }
   }
 
-  setWheelEventListener(e => {
-    if (isWhyFileVisible()) return
 
+  disposables.push(useWheelEventListener(e => {
+    // if (isWhyFileVisible()) return
     // This compares with the time of the previous zoom to implement "zoom
     // locking" to prevent zoom from changing to scroll if you zoom by
     // flicking on the touchpad with a key pressed but release the key while
@@ -531,22 +543,28 @@ export function createFlame (metafile: Metafile, options?: CreateFlameOptions) {
 
     modifyViewport(deltaX, deltaY, isZoom ? e.pageX : null)
     updateHover(e)
-  })
+  }))
 
   resize()
   Promise.resolve().then(resize) // Resize once the element is in the DOM
-  setDarkModeListener(draw)
-  // setAfterColorMappingUpdate(draw)
-  setResizeEventListener(resize)
+  
+  disposables.push(useDarkModeListener(draw)) 
+  disposables.push(useResizeEventListener(resize))
+
+  function dispose() {
+    disposables.forEach(d => d())
+    disposables.length = 0
+  }
 
   componentEl.id = styles.flamePanel
-  tooltipEl.className = indexStyles.tooltip
   mainEl.append(canvas)
-  componentEl.append(mainEl, tooltipEl)
+  componentEl.append(mainEl)
 
   return {
     el: componentEl,
+    events,
     draw,
-    resize
+    resize,
+    dispose,
   }
 }
