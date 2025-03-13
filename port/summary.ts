@@ -1,4 +1,3 @@
-import styles from './summary.module.css'
 import type { Metafile } from './metafile'
 import { cjsColor, esmColor } from './color'
 import {
@@ -7,6 +6,7 @@ import {
   isSourceMapPath,
   textToHTML,
 } from './helpers'
+import styles from './summary.module.css'
 
 enum CONSTANTS {
   FORMAT_WIDTH = 200,

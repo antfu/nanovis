@@ -1,4 +1,3 @@
-import styles from './whyfile.module.css'
 import type { Metafile } from './metafile';
 import {
   bytesToText,
@@ -12,6 +11,7 @@ import {
   posixRelPath,
   textToHTML,
 } from './helpers';
+import styles from './whyfile.module.css'
 
 interface ImportRecord {
   inputPath_: string

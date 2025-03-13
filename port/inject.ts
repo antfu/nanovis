@@ -6,8 +6,8 @@ let win = window
 
 export {
   doc as document,
+  storage as localStorage,
   math as Math,
   rAF as requestAnimationFrame,
-  storage as localStorage,
   win as window,
 }

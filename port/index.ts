@@ -1,20 +1,18 @@
-import styles from './index.module.css'
-import './import'
-import './live-reload'
 import type { Metafile } from './metafile'
-import { showSummary } from './summary'
-import { createTreemap } from './treemap'
-import { createSunburst } from './sunburst'
-import { createFlame } from './flame'
-import { hideWhyFile } from './whyfile'
-import { showWarningsPanel } from './warnings'
 import { COLOR, updateColorMapping } from './color'
+import { colorMode } from './color-mode'
+import { createFlame } from './flame'
 import {
   darkModeListener,
   localStorageGetItem,
   localStorageSetItem,
 } from './helpers'
-import { colorMode } from './color-mode'
+import styles from './index.module.css'
+import { showSummary } from './summary'
+import { createSunburst } from './sunburst'
+import { createTreemap } from './treemap'
+import { showWarningsPanel } from './warnings'
+import { hideWhyFile } from './whyfile'
 
 enum CHART {
   NONE,

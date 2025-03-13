@@ -17,9 +17,6 @@ export default antfu(
   .override('antfu/regexp/rules', {
     ignores: portFiles,
   })
-  .override('antfu/perfectionist/setup', {
-    ignores: portFiles,
-  })
   .append({
     files: portFiles,
     rules: {
@@ -33,5 +30,7 @@ export default antfu(
       'one-var': 0,
       'eqeqeq': 0,
       'ts/prefer-literal-enum-member': 0,
+      'antfu/no-top-level-await': 2,
+      'antfu/top-level-function': 2,
     },
   })

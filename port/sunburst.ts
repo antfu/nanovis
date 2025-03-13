@@ -1,10 +1,5 @@
-import indexStyles from './index.module.css'
-import styles from './sunburst.module.css'
 import type { Metafile } from './metafile'
-import { isWhyFileVisible, showWhyFile } from './whyfile'
 import type { TreeNodeInProgress } from './tree';
-import { accumulatePath, orderChildrenBySize } from './tree'
-import { colorMode } from './color-mode'
 import {
   canvasFillStyleForInputPath,
   COLOR,
@@ -12,6 +7,7 @@ import {
   moduleTypeLabelInputPath,
   setAfterColorMappingUpdate,
 } from './color'
+import { colorMode } from './color-mode'
 import {
   bytesToText,
   isSourceMapPath,
@@ -24,6 +20,10 @@ import {
   stripDisabledPathPrefix,
   textToHTML,
 } from './helpers'
+import indexStyles from './index.module.css'
+import styles from './sunburst.module.css'
+import { accumulatePath, orderChildrenBySize } from './tree'
+import { isWhyFileVisible, showWhyFile } from './whyfile'
 
 enum CONSTANTS {
   ANIMATION_DURATION = 350,

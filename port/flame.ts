@@ -1,10 +1,5 @@
-import indexStyles from './index.module.css'
-import styles from './flame.module.css'
 import type { Metafile } from './metafile'
-import { isWhyFileVisible, showWhyFile } from './whyfile'
 import type { TreeNodeInProgress } from './tree';
-import { accumulatePath, orderChildrenBySize } from './tree'
-import { colorMode } from './color-mode'
 import {
   canvasFillStyleForInputPath,
   COLOR,
@@ -12,6 +7,8 @@ import {
   otherColor,
   setAfterColorMappingUpdate,
 } from './color'
+import { colorMode } from './color-mode'
+import styles from './flame.module.css'
 import {
   bytesToText,
   commonPrefixFinder,
@@ -26,6 +23,9 @@ import {
   strokeRectWithFirefoxBugWorkaround,
   textToHTML,
 } from './helpers'
+import indexStyles from './index.module.css'
+import { accumulatePath, orderChildrenBySize } from './tree'
+import { isWhyFileVisible, showWhyFile } from './whyfile'
 
 enum CONSTANTS {
   MARGIN = 50,

@@ -1,12 +1,12 @@
-import styles from './warnings.module.css'
 import type { Metafile } from './metafile'
-import { showWhyFile } from './whyfile'
 import {
   commonPostfixFinder,
   commonPrefixFinder,
   splitPathBySlash,
   textToHTML,
 } from './helpers'
+import styles from './warnings.module.css'
+import { showWhyFile } from './whyfile'
 
 let previousMetafile: Metafile | undefined
 

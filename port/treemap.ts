@@ -1,10 +1,9 @@
-import styles from './treemap.module.css'
 import type { Metafile } from './metafile'
 import type { TreeNodeInProgress} from './tree';
-import { accumulatePath, orderChildrenBySize } from './tree'
+import { createNanoEvents } from 'nanoevents'
 import {
-  COLOR,
   canvasFillStyleForInputPath,
+  COLOR,
   moduleTypeLabelInputPath,
   setAfterColorMappingUpdate,
   updateColorMapping,
@@ -21,7 +20,8 @@ import {
   stripDisabledPathPrefix,
   strokeRectWithFirefoxBugWorkaround,
 } from './helpers'
-import { createNanoEvents } from 'nanoevents'
+import { accumulatePath, orderChildrenBySize } from './tree'
+import styles from './treemap.module.css'
 
 interface Events {
   hover: (node: TreeNode | null, e: MouseEvent) => void
