@@ -30,10 +30,10 @@ export function moduleTypeLabelInputPath(
   if (!color)
     return ''
   if (color === COLOR_ESM)
-    return prefix + 'ESM'
+    return `${prefix}ESM`
   if (color === COLOR_CJS)
-    return prefix + 'CJS'
-  return prefix + 'ESM & CJS'
+    return `${prefix}CJS`
+  return `${prefix}ESM & CJS`
 }
 
 export function createColorGetterFormats<T>(tree: Tree<T>, metafile: Metafile): (node: TreeNode<T>) => ColorValue | undefined {

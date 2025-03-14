@@ -191,8 +191,8 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     const ratio = window.devicePixelRatio || 1
     width = Math.min(el.clientWidth, 1600)
     height = Math.max(Math.round(width / 2), innerHeight - 200)
-    canvas.style.width = width + 'px'
-    canvas.style.height = height + 'px'
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
     c.scale(ratio, ratio)
@@ -251,7 +251,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     while (i < n) {
       const charWidth = charCodeWidth(text.charCodeAt(i))
       if (width < textWidth + ellipsisWidth + charWidth) {
-        return [text.slice(0, i) + '...', textWidth + ellipsisWidth]
+        return [`${text.slice(0, i)}...`, textWidth + ellipsisWidth]
       }
       textWidth += charWidth
       i++
@@ -326,7 +326,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
       if (nameText === text && node.children.length) {
         let detailText = subtext || ''
         if (detailText && text)
-          detailText = ' - ' + detailText
+          detailText = ` - ${detailText}`
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
         c.globalAlpha = 0.5
@@ -354,7 +354,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     }
   }
 
-  let draw = (): void => {
+  function draw(): void {
     bgColor = palette.bg
     animationFrame = null
 
@@ -422,6 +422,13 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
   }
 
   const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): NodeLayout<T> | null => {
+    let mouseX = mouseEvent.pageX
+    let mouseY = mouseEvent.pageY
+    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
+      mouseX -= el.offsetLeft
+      mouseY -= el.offsetTop
+    }
+
     const visit = (nodes: NodeLayout<T>[], isTopLevel: boolean): NodeLayout<T> | null => {
       for (const node of nodes) {
         const [x, y, w, h] = node.box
@@ -430,13 +437,6 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
         }
       }
       return null
-    }
-
-    let mouseX = mouseEvent.pageX
-    let mouseY = mouseEvent.pageY
-    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
-      mouseX -= el.offsetLeft
-      mouseY -= el.offsetTop
     }
 
     return currentLayout ? visit([currentLayout], false) : visit(layoutNodes, true)
@@ -450,7 +450,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     events.emit('hover', layout?.node || null, e)
   }
 
-  let changeHoveredNode = (node: TreeNode<T> | null): void => {
+  function changeHoveredNode(node: TreeNode<T> | null): void {
     if (hoveredNode !== node) {
       hoveredNode = node
       canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
@@ -458,7 +458,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     }
   }
 
-  const searchFor = (children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null => {
+  function searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
     for (const child of children) {
       const result = child.node === node ? child : searchFor(child.children, node)
       if (result)
@@ -467,7 +467,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     return null
   }
 
-  const changeCurrentNode = (node: NodeLayout<T> | null, animate: boolean = options.animate ?? true): void => {
+  function changeCurrentNode(node: NodeLayout<T> | null, animate: boolean = options.animate ?? true): void {
     if (currentNode !== node) {
       events.emit('select', node?.node || null)
       previousLayout = node ? currentLayout : null

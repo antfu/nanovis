@@ -2,10 +2,12 @@
   colorToCanvasFill: function
   colorToCssBackground: function
   createColorGetterFromMap: function
-  createColorGetterGradient: function
+  createColorGetterSpectrum: function
   createFlamegraph: function
   createSunburst: function
   createTreemap: function
+  DEFAULT_GRAPH_OPTIONS: object
+  DEFAULT_PALETTE: object
   hueAngleToColor: function
 ./esbuild:
   createColorGetterFormats: function

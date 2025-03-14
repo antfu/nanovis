@@ -53,8 +53,10 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
   let stripeScaleAdjust = 1
   let animationFrame: number | null = null
   let hoveredNode: TreeNode<T> | null = null
-  const normalFont = '14px sans-serif', boldWidthCache: Record<number, number> = {}
-  const boldFont = 'bold ' + normalFont, normalWidthCache: Record<number, number> = {}
+  const normalFont = '14px sans-serif'
+  const boldWidthCache: Record<number, number> = {}
+  const boldFont = `bold ${normalFont}`
+  const normalWidthCache: Record<number, number> = {}
   let ellipsisWidth = 0
   let currentWidthCache: Record<number, number> = normalWidthCache
 
@@ -88,9 +90,9 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
       zoomedOutWidth = width
     zoomedOutWidth -= zoomedOutMin
     stripeScaleAdjust = totalBytes / zoomedOutWidth
-    canvas.style.width = width + 'px'
-    canvas.style.height = height + 'px'
-    mainEl.style.height = height + 'px'
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+    mainEl.style.height = `${height}px`
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
     c.scale(ratio, ratio)
@@ -107,7 +109,7 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
         break
       i++
     }
-    return text.slice(0, i) + '...'
+    return `${text.slice(0, i)}...`
   }
 
   // We want to avoid overlapping strokes from lots of really small adjacent
@@ -180,7 +182,7 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
     if (typesetX + ellipsisWidth < typesetW) {
       sizeText = getSubtext(node) || ''
       if (sizeText)
-        sizeText = ' - ' + sizeText
+        sizeText = ` - ${sizeText}`
       measuredW = c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
         sizeText = textOverflowEllipsis(sizeText, typesetW - typesetX)
@@ -205,7 +207,7 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
     return rightEdge
   }
 
-  let draw = (): void => {
+  function draw(): void {
     let startBytes = 0
     let rightEdge = -Infinity
 
@@ -219,12 +221,22 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
     }
   }
 
-  let invalidate = (): void => {
+  function invalidate(): void {
     if (animationFrame === null)
       animationFrame = requestAnimationFrame(draw)
   }
 
-  const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null => {
+  function hitTestNode(mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null {
+    let mouseX = mouseEvent.pageX
+    let mouseY = mouseEvent.pageY
+    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
+      mouseX -= el.offsetLeft
+      mouseY -= el.offsetTop
+    }
+
+    const mouseBytes = viewportMin + (viewportMax - viewportMin) / zoomedOutWidth * (mouseX - zoomedOutMin)
+    let startBytes = 0
+
     const visit = (node: TreeNode<T>, y: number, startBytes: number): TreeNode<T> | null => {
       if (mouseBytes >= startBytes && mouseBytes < startBytes + node.size) {
         if (mouseY >= y && mouseY < y + CONSTANT_ROW_HEIGHT && node.id) {
@@ -242,16 +254,6 @@ export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraph
       }
       return null
     }
-
-    let mouseX = mouseEvent.pageX
-    let mouseY = mouseEvent.pageY
-    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
-      mouseX -= el.offsetLeft
-      mouseY -= el.offsetTop
-    }
-
-    let mouseBytes = viewportMin + (viewportMax - viewportMin) / zoomedOutWidth * (mouseX - zoomedOutMin)
-    let startBytes = 0
 
     for (const child of tree.root.children) {
       const result = visit(child, 0, startBytes)

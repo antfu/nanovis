@@ -74,7 +74,30 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
   let currentNode = tree.root
   let hoveredNode: TreeNode<T> | undefined
 
-  const changeCurrentNode = (node: TreeNode<T> | null, animate?: boolean): void => {
+  const START_ANGLE = -Math.PI / 2
+  let width = 0
+  let height = 0
+  let centerX = 0
+  let centerY = 0
+
+  let animationFrame: number | null = null
+  let animationStart = 0
+
+  let sourceDepth = 0
+  let sourceStartAngle = START_ANGLE
+  let sourceSweepAngle = Math.PI * 2
+
+  let targetNode = currentNode
+  let targetDepth = sourceDepth
+  let targetStartAngle = sourceStartAngle
+  let targetSweepAngle = sourceSweepAngle
+
+  let animatedNode = currentNode
+  let animatedDepth = sourceDepth
+  let animatedStartAngle = sourceStartAngle
+  let animatedSweepAngle = sourceSweepAngle
+
+  function changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
     node = node || tree.root
     if (currentNode !== node) {
       currentNode = node
@@ -83,7 +106,7 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
     }
   }
 
-  const changeHoveredNode = (node: TreeNode<T> | undefined, animate?: boolean): void => {
+  function changeHoveredNode(node: TreeNode<T> | undefined, animate?: boolean): void {
     if (hoveredNode !== node) {
       hoveredNode = node
       updateSunburst(animate)
@@ -100,8 +123,8 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
     height = width
     centerX = width >> 1
     centerY = height >> 1
-    canvas.style.width = width + 'px'
-    canvas.style.height = height + 'px'
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
     c.scale(ratio, ratio)
@@ -190,30 +213,19 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
     }
   }
 
-  const START_ANGLE = -Math.PI / 2
-  let width = 0
-  let height = 0
-  let centerX = 0
-  let centerY = 0
-
-  let animationFrame: number | null = null
-  let animationStart = 0
-
-  let sourceDepth = 0
-  let sourceStartAngle = START_ANGLE
-  let sourceSweepAngle = Math.PI * 2
-
-  let targetNode = currentNode
-  let targetDepth = sourceDepth
-  let targetStartAngle = sourceStartAngle
-  let targetSweepAngle = sourceSweepAngle
-
-  let animatedNode = currentNode
-  let animatedDepth = sourceDepth
-  let animatedStartAngle = sourceStartAngle
-  let animatedSweepAngle = sourceSweepAngle
-
   function hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
+    let x = mouseEvent.pageX
+    let y = mouseEvent.pageY
+    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
+      x -= el.offsetLeft
+      y -= el.offsetTop
+    }
+
+    x -= centerX
+    y -= centerY
+    const mouseRadius = Math.sqrt(x * x + y * y)
+    const mouseAngle = Math.atan2(y, x)
+
     function visit(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | undefined {
       const outerRadius = computeRadius(depth + 1)
       if (outerRadius > centerY)
@@ -246,17 +258,6 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
       return undefined
     }
 
-    let x = mouseEvent.pageX
-    let y = mouseEvent.pageY
-    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
-      x -= el.offsetLeft
-      y -= el.offsetTop
-    }
-
-    x -= centerX
-    y -= centerY
-    let mouseRadius = Math.sqrt(x * x + y * y)
-    let mouseAngle = Math.atan2(y, x)
     return visit(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle)
   }
 
@@ -347,7 +348,7 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
     }
   }
 
-  const updateSunburst = (animate: boolean = options.animate ?? true) => {
+  function updateSunburst(animate: boolean = options.animate ?? true): void {
     if (previousHoveredNode !== hoveredNode) {
       previousHoveredNode = hoveredNode
       if (!hoveredNode) {

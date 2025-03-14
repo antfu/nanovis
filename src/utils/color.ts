@@ -4,7 +4,7 @@ import type { Tree, TreeNode } from '../types/tree'
 export function hueAngleToColor(hueAngle: number, saturationMultiplier = 1, lightnessMultiplier = 1): string {
   const saturation = (0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))) * saturationMultiplier
   const lightness = (0.5 + 0.2 * Math.max(0, Math.cos(hueAngle + Math.PI * 2 / 3))) * lightnessMultiplier
-  return 'hsl(' + hueAngle * 180 / Math.PI + 'deg, ' + Math.round(100 * saturation) + '%, ' + Math.round(100 * lightness) + '%)'
+  return `hsl(${hueAngle * 180 / Math.PI}deg, ${Math.round(100 * saturation)}%, ${Math.round(100 * lightness)}%)`
 }
 
 let previousPatternContext: CanvasRenderingContext2D | undefined

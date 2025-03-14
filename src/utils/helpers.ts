@@ -3,7 +3,7 @@ const isFirefox = /\bFirefox\//.test(navigator.userAgent)
 let numberFormat: Intl.NumberFormat | undefined
 
 export function formatInteger(value: number): string {
-  return numberFormat ? numberFormat.format(value) : value + ''
+  return numberFormat ? numberFormat.format(value) : `${value}`
 }
 
 export function now(): number {
@@ -12,19 +12,19 @@ export function now(): number {
 
 export function formatNumberWithDecimal(value: number): string {
   const parts = value.toFixed(1).split('.', 2)
-  return formatInteger(+parts[0]) + '.' + parts[1]
+  return `${formatInteger(+parts[0])}.${parts[1]}`
 }
 
 export function bytesToText(bytes: number): string {
   if (bytes === 1)
     return '1 byte'
   if (bytes < 1024)
-    return formatInteger(bytes) + ' bytes'
+    return `${formatInteger(bytes)} bytes`
   if (bytes < 1024 * 1024)
-    return formatNumberWithDecimal(bytes / 1024) + ' kb'
+    return `${formatNumberWithDecimal(bytes / 1024)} kb`
   if (bytes < 1024 * 1024 * 1024)
-    return formatNumberWithDecimal(bytes / (1024 * 1024)) + ' mb'
-  return formatNumberWithDecimal(bytes / (1024 * 1024 * 1024)) + ' gb'
+    return `${formatNumberWithDecimal(bytes / (1024 * 1024))} mb`
+  return `${formatNumberWithDecimal(bytes / (1024 * 1024 * 1024))} gb`
 }
 
 export function strokeRectWithFirefoxBugWorkaround(c: CanvasRenderingContext2D, color: string, x: number, y: number, w: number, h: number): void {
