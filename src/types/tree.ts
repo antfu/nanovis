@@ -30,6 +30,7 @@ export interface GraphBaseOptions<T> {
   getSubtext?: (node: TreeNode<T>) => string | undefined
   palette?: Partial<Palette>
   animate?: boolean
+  animateDuration?: number
 
   onHover?: Events<T>['hover']
   onClick?: Events<T>['click']

@@ -31,6 +31,7 @@ const options = {
   onHover,
   onLeave,
   // animate: false,
+  // animateDuration: 1000,
 }
 const el = useTemplateRef('el')
 

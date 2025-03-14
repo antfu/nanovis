@@ -1,5 +1,6 @@
 import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import { colorToCanvasFill } from '../utils/color'
+import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
   bytesToText,
   now,
@@ -7,8 +8,6 @@ import {
   useWheelEventListener,
 } from '../utils/helpers'
 import { createGraphContext } from './context'
-
-const CONSTANT_ANIMATION_DURATION = 350
 
 // eslint-disable-next-line no-restricted-syntax
 const enum FLAGS {
@@ -262,7 +261,7 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
   }
 
   function tick(): void {
-    let t = (now() - animationStart) / CONSTANT_ANIMATION_DURATION
+    let t = (now() - animationStart) / (options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
 
     if (t < 0 || t > 1) {
       t = 1

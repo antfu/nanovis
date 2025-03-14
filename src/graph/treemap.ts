@@ -3,6 +3,7 @@ import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import {
   colorToCanvasFill,
 } from '../utils/color'
+import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
   now,
   strokeRectWithFirefoxBugWorkaround,
@@ -14,7 +15,6 @@ import { createGraphContext } from './context'
 const CONSTANT_PADDING = 4
 const CONSTANT_HEADER_HEIGHT = 20
 const CONSTANT_DOT_CHAR_CODE = 46
-const CONSTANT_ANIMATION_DURATION = 350
 const CONSTANT_INSET_X = 2 * CONSTANT_PADDING
 const CONSTANT_INSET_Y = CONSTANT_HEADER_HEIGHT + CONSTANT_PADDING
 
@@ -197,7 +197,7 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
   const tick = (): void => {
     const oldAnimationBlend = animationBlend
     const oldCurrentNode = currentNode
-    animationBlend = (now() - animationStart) / CONSTANT_ANIMATION_DURATION
+    animationBlend = (now() - animationStart) / (options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
 
     if (animationBlend < 0 || animationBlend > 1) {
       currentNode = animationTarget

@@ -4,6 +4,7 @@ export const DEFAULT_GRAPH_OPTIONS = {
   getText: node => node.text,
   getSubtext: node => node.subtext,
   animate: true,
+  animateDuration: 350,
 } satisfies GraphBaseOptions<any>
 
 export const DEFAULT_PALETTE: Palette = {
