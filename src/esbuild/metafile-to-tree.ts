@@ -7,7 +7,7 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
   const outputs = metafile.outputs
   const nodes: TreeNode<T>[] = []
   let commonPrefix: string[] | undefined
-  const root: TreeNodeInProgress = { text: '', id: '', size: 0, childrenMap: {} }
+  const root: TreeNodeInProgress = { text: '', id: '<root>', size: 0, childrenMap: {} }
 
   const sortChildren = (node: TreeNodeInProgress): TreeNode<T> => {
     const children = node.childrenMap

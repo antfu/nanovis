@@ -196,7 +196,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
     canvas.height = Math.round(height * ratio)
     c.scale(ratio, ratio)
     if (width !== oldWidth || height !== oldHeight) {
-      layoutNodes = layoutTreemap(tree.root.children, 0, 0, width - 1, height - 1)
+      layoutNodes = layoutTreemap([tree.root], 0, 0, width - 1, height - 1)
       updateCurrentLayout()
     }
     draw()
@@ -209,6 +209,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
 
     if (animationBlend < 0 || animationBlend > 1) {
       currentNode = animationTarget
+      previousLayout = null
       animationBlend = 1
       animationFrame = null
     }
@@ -323,7 +324,7 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
       if (nameText === text && node.children.length) {
         let detailText = subtext || ''
-        if (detailText)
+        if (detailText && text)
           detailText = ' - ' + detailText
         const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
