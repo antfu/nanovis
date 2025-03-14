@@ -1,12 +1,26 @@
-import type { Events, GraphBaseOptions, Tree } from '../types'
+import type { Emitter } from 'nanoevents'
+import type { ColorValue, Events, GraphBaseOptions, Palette, Tree, TreeNode } from '../types'
 import { createNanoEvents } from 'nanoevents'
 import { createColorGetterSpectrum } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS, DEFAULT_PALETTE } from '../utils/defaults'
 
+export interface GraphContext<T> {
+  el: HTMLElement
+  events: Emitter<Events<T>>
+  options: GraphBaseOptions<T>
+  palette: Palette
+  disposables: (() => void)[]
+  getColor: (node: TreeNode<T>) => ColorValue | undefined
+  getText: (node: TreeNode<T>) => string | undefined
+  getSubtext: (node: TreeNode<T>) => string | undefined
+  dispose: () => void
+  [Symbol.dispose]: () => void
+}
+
 export function createGraphContext<T>(
   tree: Tree<T>,
   options: GraphBaseOptions<T> = {},
-) {
+): GraphContext<T> {
   const merged = {
     ...DEFAULT_GRAPH_OPTIONS,
     ...options,
@@ -49,9 +63,11 @@ export function createGraphContext<T>(
     events,
     disposables,
     palette,
+    options: merged,
     getColor,
     getText,
     getSubtext,
     dispose,
+    [Symbol.dispose]: dispose,
   }
 }

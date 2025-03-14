@@ -23,17 +23,9 @@ const enum FLAGS {
 export interface CreateFlamegraphOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOptions<T> = {}) {
-  const {
-    getColor,
-    getText,
-    getSubtext,
-    events,
-    disposables,
-    dispose,
-    el,
-    palette,
-  } = createGraphContext(tree, options)
+export function createFlamegraph<T>(tree: Tree<T>, userOptions: CreateFlamegraphOptions<T> = {}) {
+  const ctx = createGraphContext(tree, userOptions)
+  const { el, events, disposables, palette, getColor, getText, getSubtext } = ctx
 
   const totalBytes = tree.root.size
   let viewportMin = 0
@@ -393,14 +385,11 @@ export function createFlamegraph<T>(tree: Tree<T>, options: CreateFlamegraphOpti
   el.append(mainEl)
 
   return {
-    el,
-    events,
+    ...ctx,
     draw,
     resize,
-    dispose,
     select: (node: TreeNode<T> | null) => {
       changeHoveredNode(node)
     },
-    [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>
 }

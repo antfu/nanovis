@@ -1,4 +1,4 @@
-import type { Emitter } from 'nanoevents'
+import type { GraphContext } from '../graph/context'
 import type { ColorValue, Palette } from './color'
 
 export interface TreeNode<T> {
@@ -37,12 +37,8 @@ export interface GraphBaseOptions<T> {
   onSelect?: Events<T>['select']
 }
 
-export interface GraphBase<T> {
-  el: HTMLElement
-  events: Emitter<Events<T>>
+export interface GraphBase<T> extends GraphContext<T> {
   draw: () => void
   resize: () => void
   select: (node: TreeNode<T> | null, animate?: boolean) => void
-  dispose: () => void
-  [Symbol.dispose]: () => void
 }

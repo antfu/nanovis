@@ -119,17 +119,9 @@ function layoutTreemap<T>(sortedChildren: TreeNode<T>[], x: number, y: number, w
 export interface TreemapOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {}) {
-  const {
-    getColor,
-    getText,
-    getSubtext,
-    el,
-    events,
-    disposables,
-    palette,
-    dispose,
-  } = createGraphContext(tree, options)
+export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> = {}) {
+  const ctx = createGraphContext(tree, userOptions)
+  const { el, events, disposables, palette, options, getColor, getText, getSubtext } = ctx
 
   let layoutNodes: NodeLayout<T>[] = []
   const canvas = document.createElement('canvas')
@@ -522,14 +514,11 @@ export function createTreemap<T>(tree: Tree<T>, options: TreemapOptions<T> = {})
   el.append(canvas)
 
   return {
-    el,
-    events,
+    ...ctx,
     resize,
     draw,
     select: (node: TreeNode<T> | null, animate?: boolean) => {
       changeCurrentNode(node ? searchFor(layoutNodes, node) : null, animate)
     },
-    dispose,
-    [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>
 }

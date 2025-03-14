@@ -61,15 +61,9 @@ function computeRadius(depth: number): number {
 export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<T> = {}) {
-  const {
-    getColor,
-    events,
-    disposables,
-    dispose,
-    el,
-    palette,
-  } = createGraphContext(tree, options)
+export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOptions<T> = {}) {
+  const ctx = createGraphContext(tree, userOptions)
+  const { el, events, disposables, options, palette, getColor } = ctx
 
   while (tree.root.children.length === 1) {
     tree = {
@@ -420,14 +414,11 @@ export function createSunburst<T>(tree: Tree<T>, options: CreateSunburstOptions<
   el.append(canvas)
 
   return {
-    el,
-    events,
+    ...ctx,
     draw,
     resize,
-    dispose,
     select: (node: TreeNode<T> | null, animate?: boolean) => {
       changeCurrentNode(node, animate)
     },
-    [Symbol.dispose]: dispose,
   } satisfies GraphBase<T>
 }
