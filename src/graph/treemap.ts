@@ -117,11 +117,20 @@ function layoutTreemap<T>(sortedChildren: TreeNode<T>[], x: number, y: number, w
 }
 
 export interface TreemapOptions<T> extends GraphBaseOptions<T> {
+  /**
+   * Padding ratio for the selected node. Ratio relative to the width and height of the canvas.
+   *
+   * @default 0.2
+   */
+  selectedPaddingRatio?: number
 }
 
 export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> = {}) {
   const ctx = createGraphContext(tree, userOptions)
   const { el, events, disposables, palette, options, getColor, getText, getSubtext } = ctx
+  const {
+    selectedPaddingRatio = 0.2,
+  } = userOptions
 
   let layoutNodes: NodeLayout<T>[] = []
   const canvas = document.createElement('canvas')
@@ -155,8 +164,8 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
       const [ox1, oy1, ow, oh] = currentNode.box
       const ox2 = ox1 + ow
       const oy2 = oy1 + oh
-      const nx1 = Math.round(width / 10)
-      const ny1 = Math.round(height / 10)
+      const nx1 = Math.round(width * selectedPaddingRatio / 2)
+      const ny1 = Math.round(height * selectedPaddingRatio / 2)
       const nx2 = width - nx1 - 1
       const ny2 = height - ny1 - 1
       const t = animationTarget ? animationBlend : 1 - animationBlend
