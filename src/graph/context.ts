@@ -6,8 +6,11 @@ import { DEFAULT_GRAPH_OPTIONS, DEFAULT_PALETTE } from '../utils/defaults'
 
 export class GraphContext<T, Options extends GraphBaseOptions<T>> {
   public readonly el: HTMLElement
+
   public readonly canvas: HTMLCanvasElement
   public readonly c: CanvasRenderingContext2D
+  public width = 0
+  public height = 0
 
   public tree: Tree<T>
   public readonly events: Emitter<Events<T>>
@@ -19,6 +22,8 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
   public getColor: (node: TreeNode<T>) => ColorValue | undefined
   public getText: (node: TreeNode<T>) => string | undefined
   public getSubtext: (node: TreeNode<T>) => string | undefined
+
+  private _animationFrame: number | null = null
 
   constructor(tree: Tree<T>, options: Options) {
     this.options = {
@@ -59,6 +64,40 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
     this.el.addEventListener('mouseleave', () => {
       this.events.emit('leave')
     })
+  }
+
+  /**
+   * Invalidate the graph and request a new frame.
+   */
+  invalidate(): void {
+    if (this._animationFrame === null) {
+      this._animationFrame = requestAnimationFrame(() => {
+        this._animationFrame = null
+        this.tick()
+      })
+    }
+  }
+
+  /**
+   * To be overridden by subclasses to implement custom animation logic.
+   */
+  tick(): void {
+    this.draw()
+  }
+
+  /**
+   * To be overridden by subclasses to implement custom animation logic.
+   */
+  draw(): void {}
+
+  resize(): void {
+    const ratio = window.devicePixelRatio || 1
+    this.canvas.style.width = `${this.width}px`
+    this.canvas.style.height = `${this.height}px`
+    this.canvas.width = Math.round(this.width * ratio)
+    this.canvas.height = Math.round(this.height * ratio)
+    this.c.scale(ratio, ratio)
+    this.draw()
   }
 
   public dispose(): void {

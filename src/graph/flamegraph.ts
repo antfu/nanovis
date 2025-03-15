@@ -30,14 +30,11 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   viewportMin: number
   viewportMax: number
 
-  width = 0
-  height = 0
   zoomedOutMin = 0
   zoomedOutWidth = 0
   prevWheelTime = 0
   prevWheelWasZoom = false
   stripeScaleAdjust = 1
-  animationFrame: number | null = null
   hoveredNode: TreeNode<T> | null = null
   normalFont = '14px sans-serif'
   boldWidthCache: Record<number, number> = {}
@@ -160,8 +157,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     return width
   }
 
-  resize(): void {
-    const ratio = window.devicePixelRatio || 1
+  override resize(): void {
     this.width = this.el.clientWidth
     this.height = this.tree.maxDepth * CONSTANT_ROW_HEIGHT + 1
     this.zoomedOutMin = (this.width - CONSTANT_ZOOMED_OUT_WIDTH) >> 1
@@ -172,13 +168,8 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
       this.zoomedOutWidth = this.width
     this.zoomedOutWidth -= this.zoomedOutMin
     this.stripeScaleAdjust = this.totalBytes / this.zoomedOutWidth
-    this.canvas.style.width = `${this.width}px`
-    this.canvas.style.height = `${this.height}px`
     this.mainEl.style.height = `${this.height}px`
-    this.canvas.width = Math.round(this.width * ratio)
-    this.canvas.height = Math.round(this.height * ratio)
-    this.c.scale(ratio, ratio)
-    this.draw()
+    super.resize()
   }
 
   textOverflowEllipsis(text: string, width: number): string {
@@ -289,11 +280,14 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     return rightEdge
   }
 
-  draw(): void {
+  override tick(): void {
+    this.draw()
+  }
+
+  override draw(): void {
     let startBytes = 0
     let rightEdge = -Infinity
 
-    this.animationFrame = null
     this.c.clearRect(0, 0, this.width, this.height)
     this.c.textBaseline = 'middle'
 
@@ -301,11 +295,6 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
       rightEdge = this.drawNode(child, 0, startBytes, rightEdge, FLAGS.OUTPUT)
       startBytes += child.size
     }
-  }
-
-  invalidate(): void {
-    if (this.animationFrame === null)
-      this.animationFrame = requestAnimationFrame(this.draw)
   }
 
   hitTestNode(mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null {

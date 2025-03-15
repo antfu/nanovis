@@ -65,12 +65,8 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
   hoveredNode: TreeNode<T> | undefined
 
   START_ANGLE = -Math.PI / 2
-  width = 0
-  height = 0
   centerX = 0
   centerY = 0
-
-  animationFrame: number | null = null
   animationStart = 0
 
   sourceDepth = 0
@@ -147,6 +143,15 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     this.disposables.push(useWheelEventListener(e => this.handleMouseMove(e)))
   }
 
+  override resize(): void {
+    const maxRadius = 2 * Math.ceil(computeRadius(this.tree.maxDepth))
+    this.width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
+    this.height = this.width
+    this.centerX = this.width >> 1
+    this.centerY = this.height >> 1
+    super.resize()
+  }
+
   changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
     node = node || this.tree.root
     if (this.currentNode !== node) {
@@ -161,21 +166,6 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
       this.hoveredNode = node
       this.updateSunburst(animate)
     }
-  }
-
-  resize(): void {
-    const maxRadius = 2 * Math.ceil(computeRadius(this.tree.maxDepth))
-    const ratio = window.devicePixelRatio || 1
-    this.width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
-    this.height = this.width
-    this.centerX = this.width >> 1
-    this.centerY = this.height >> 1
-    this.canvas.style.width = `${this.width}px`
-    this.canvas.style.height = `${this.height}px`
-    this.canvas.width = Math.round(this.width * ratio)
-    this.canvas.height = Math.round(this.height * ratio)
-    this.c.scale(ratio, ratio)
-    this.draw()
   }
 
   // We want to avoid overlapping strokes from lots of really small adjacent
@@ -308,12 +298,11 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     return visit(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle)
   }
 
-  tick(): void {
+  override tick(): void {
     let t = (now() - this.animationStart) / (this.options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
 
     if (t < 0 || t > 1) {
       t = 1
-      this.animationFrame = null
       this.animatedNode = this.targetNode
       this.targetDepth = 0
       this.targetStartAngle = this.START_ANGLE
@@ -329,7 +318,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
         t *= 4 * t * t
         t = 1 - t
       }
-      this.animationFrame = requestAnimationFrame(() => this.tick())
+      this.invalidate()
     }
 
     this.animatedDepth = this.sourceDepth + (this.targetDepth - this.sourceDepth) * t
@@ -360,16 +349,14 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
         this.canvas.style.cursor = 'auto'
         this.events.emit('hover', null)
       }
-      if (this.animationFrame === null)
-        this.animationFrame = requestAnimationFrame(() => this.tick())
+      this.invalidate()
     }
 
     if (this.targetNode === this.currentNode)
       return
     this.historyStack.length = 0
 
-    if (this.animationFrame === null)
-      this.animationFrame = requestAnimationFrame(() => this.tick())
+    this.invalidate()
 
     if (animate) {
       this.animationStart = now()

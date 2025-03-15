@@ -128,9 +128,6 @@ export interface TreemapOptions<T> extends GraphBaseOptions<T> {
 export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
   layoutNodes: NodeLayout<T>[] = []
 
-  width = 0
-  height = 0
-  animationFrame: number | null = null
   hoveredNode: TreeNode<T> | null = null
   bgOriginX = 0
   bgOriginY = 0
@@ -177,25 +174,19 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     }
   }
 
-  resize(): void {
+  override resize(): void {
     const oldWidth = this.width
     const oldHeight = this.height
-    const ratio = window.devicePixelRatio || 1
     this.width = Math.min(this.el.clientWidth, 1600)
     this.height = Math.max(Math.round(this.width / 2), innerHeight - 200)
-    this.canvas.style.width = `${this.width}px`
-    this.canvas.style.height = `${this.height}px`
-    this.canvas.width = Math.round(this.width * ratio)
-    this.canvas.height = Math.round(this.height * ratio)
-    this.c.scale(ratio, ratio)
     if (this.width !== oldWidth || this.height !== oldHeight) {
       this.layoutNodes = layoutTreemap([this.tree.root], 0, 0, this.width - 1, this.height - 1)
       this.updateCurrentLayout()
     }
-    this.draw()
+    super.resize()
   }
 
-  tick(): void {
+  override tick(): void {
     const oldAnimationBlend = this.animationBlend
     const oldCurrentNode = this.currentNode
     this.animationBlend = (now() - this.animationStart) / (this.options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
@@ -204,25 +195,20 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
       this.currentNode = this.animationTarget
       this.previousLayout = null
       this.animationBlend = 1
-      this.animationFrame = null
     }
     else {
       // Use a cubic "ease-out" curve
       this.animationBlend = 1 - this.animationBlend
       this.animationBlend *= this.animationBlend * this.animationBlend
       this.animationBlend = 1 - this.animationBlend
-      this.animationFrame = requestAnimationFrame(() => this.tick())
+      this.invalidate()
     }
 
     if (this.animationBlend !== oldAnimationBlend || this.currentNode !== oldCurrentNode) {
       this.updateCurrentLayout()
     }
-    this.draw()
-  }
 
-  invalidate(): void {
-    if (this.animationFrame === null)
-      this.animationFrame = requestAnimationFrame(() => this.tick())
+    this.draw()
   }
 
   charCodeWidth(ch: number): number {
@@ -348,7 +334,6 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
 
   draw(): void {
     this.bgColor = this.palette.bg
-    this.animationFrame = null
 
     this.c.clearRect(0, 0, this.width, this.height)
     this.c.textBaseline = 'middle'
