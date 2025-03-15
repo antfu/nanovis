@@ -243,7 +243,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     // Draw the size of the current node in the middle
     if (this.animatedDepth === 0) {
       this.c.fillStyle = this.palette.stroke
-      this.c.font = 'bold 16px sans-serif'
+      this.setFont('bold 16px sans-serif')
       this.c.textAlign = 'center'
       this.c.textBaseline = 'middle'
       this.c.fillText(bytesToText(this.targetNode.size), this.centerX, this.centerY)

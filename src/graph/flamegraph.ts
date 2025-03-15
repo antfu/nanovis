@@ -11,7 +11,6 @@ import { GraphContext } from './context'
 // const CONSTANT_MARGIN = 50
 const CONSTANT_ROW_HEIGHT = 24
 const CONSTANT_TEXT_INDENT = 5
-const CONSTANT_DOT_CHAR_CODE = 46
 const CONSTANT_ZOOMED_OUT_WIDTH = 1000
 
 // eslint-disable-next-line no-restricted-syntax
@@ -22,6 +21,9 @@ const enum FLAGS {
 
 export interface CreateFlamegraphOptions<T> extends GraphBaseOptions<T> {
 }
+
+const CONSTANT_NORMAL_FONT = '14px sans-serif'
+const CONSTANT_BOLD_FONT = `bold ${CONSTANT_NORMAL_FONT}`
 
 export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   mainEl = document.createElement('div')
@@ -36,12 +38,6 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   prevWheelWasZoom = false
   stripeScaleAdjust = 1
   hoveredNode: TreeNode<T> | null = null
-  normalFont = '14px sans-serif'
-  boldWidthCache: Record<number, number> = {}
-  boldFont = `bold ${this.normalFont}`
-  normalWidthCache: Record<number, number> = {}
-  ellipsisWidth = 0
-  currentWidthCache: Record<number, number> = this.normalWidthCache
 
   constructor(tree: Tree<T>, userOptions: CreateFlamegraphOptions<T> = {}) {
     super(tree, userOptions)
@@ -148,15 +144,6 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
   }
 
-  charCodeWidth(ch: number): number {
-    let width = this.currentWidthCache[ch]
-    if (width === undefined) {
-      width = this.c.measureText(String.fromCharCode(ch)).width
-      this.currentWidthCache[ch] = width
-    }
-    return width
-  }
-
   override resize(): void {
     this.width = this.el.clientWidth
     this.height = this.tree.maxDepth * CONSTANT_ROW_HEIGHT + 1
@@ -172,24 +159,11 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     super.resize()
   }
 
-  textOverflowEllipsis(text: string, width: number): string {
-    let textWidth = this.ellipsisWidth
-    const n = text.length
-    let i = 0
-    while (i < n) {
-      textWidth += this.charCodeWidth(text.charCodeAt(i))
-      if (textWidth > width)
-        break
-      i++
-    }
-    return `${text.slice(0, i)}...`
-  }
-
   // We want to avoid overlapping strokes from lots of really small adjacent
   // rectangles all merging together into a solid color. So we enforce a
   // minimum rectangle width of 2px and we also skip drawing rectangles that
   // have a right edge less than 1.5px from the previous right edge.
-  drawNode(node: TreeNode<T>, y: number, startBytes: number, prevRightEdge: number, flags: FLAGS): number {
+  private drawNode(node: TreeNode<T>, y: number, startBytes: number, prevRightEdge: number, flags: FLAGS): number {
     const scale = this.zoomedOutWidth / (this.viewportMax - this.viewportMin)
     const x = this.zoomedOutMin + (startBytes - this.viewportMin) * scale
     const w = node.size * scale
@@ -213,9 +187,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
 
     if (flags & FLAGS.OUTPUT) {
       textColor = this.palette.fg
-      this.c.font = this.boldFont
-      this.currentWidthCache = this.boldWidthCache
-      this.ellipsisWidth = 3 * this.charCodeWidth(CONSTANT_DOT_CHAR_CODE)
+      this.setFont(CONSTANT_BOLD_FONT)
     }
     else {
       this.c.fillStyle = fillColor
@@ -237,7 +209,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
         typesetX += measuredW
       }
       else {
-        nameText = this.textOverflowEllipsis(nameText, typesetW)
+        nameText = this.textOverflowEllipsis(nameText, typesetW)[0]
         typesetX = typesetW
       }
       this.c.fillStyle = textColor
@@ -246,9 +218,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
 
     // Switch to the size font
     if (flags & FLAGS.OUTPUT) {
-      this.c.font = this.normalFont
-      this.currentWidthCache = this.normalWidthCache
-      this.ellipsisWidth = 3 * this.charCodeWidth(CONSTANT_DOT_CHAR_CODE)
+      this.setFont(CONSTANT_NORMAL_FONT)
     }
 
     // Typeset the node size
@@ -258,7 +228,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
         sizeText = ` - ${sizeText}`
       measuredW = this.c.measureText(sizeText).width
       if (typesetX + measuredW > typesetW) {
-        sizeText = this.textOverflowEllipsis(sizeText, typesetW - typesetX)
+        sizeText = this.textOverflowEllipsis(sizeText, typesetW - typesetX)[0]
       }
       this.c.globalAlpha = 0.5
       this.c.fillText(sizeText, textX + typesetX, textY)
@@ -297,7 +267,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
   }
 
-  hitTestNode(mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null {
+  private hitTestNode(mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null {
     let mouseX = mouseEvent.pageX
     let mouseY = mouseEvent.pageY
     for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
@@ -336,7 +306,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     return null
   }
 
-  modifyViewport(deltaX: number, deltaY: number, xForZoom: number | null): void {
+  private modifyViewport(deltaX: number, deltaY: number, xForZoom: number | null): void {
     let min = this.viewportMin
     let max = this.viewportMax
     let translate = 0
@@ -370,7 +340,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
   }
 
-  updateHover(e: MouseEvent | WheelEvent): void {
+  private updateHover(e: MouseEvent | WheelEvent): void {
     const node = this.hitTestNode(e)
     this.changeHoveredNode(node)
 

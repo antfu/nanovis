@@ -4,6 +4,9 @@ import { createNanoEvents } from 'nanoevents'
 import { createColorGetterSpectrum } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS, DEFAULT_PALETTE } from '../utils/defaults'
 
+const CONSTANT_DOT_CHAR_CODE = 46
+const CONSTANT_NORMAL_FONT = '14px sans-serif'
+
 export class GraphContext<T, Options extends GraphBaseOptions<T>> {
   public readonly el: HTMLElement
 
@@ -52,6 +55,8 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
     this.getText = getText
     this.getSubtext = getSubtext
 
+    this.setFont(CONSTANT_NORMAL_FONT)
+
     if (options.onClick)
       this.events.on('click', options.onClick)
     if (options.onHover)
@@ -69,7 +74,7 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
   /**
    * Invalidate the graph and request a new frame.
    */
-  invalidate(): void {
+  public invalidate(): void {
     if (this._animationFrame === null) {
       this._animationFrame = requestAnimationFrame(() => {
         this._animationFrame = null
@@ -81,16 +86,16 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
   /**
    * To be overridden by subclasses to implement custom animation logic.
    */
-  tick(): void {
+  public tick(): void {
     this.draw()
   }
 
   /**
    * To be overridden by subclasses to implement custom animation logic.
    */
-  draw(): void {}
+  public draw(): void {}
 
-  resize(): void {
+  public resize(): void {
     const ratio = window.devicePixelRatio || 1
     this.canvas.style.width = `${this.width}px`
     this.canvas.style.height = `${this.height}px`
@@ -108,5 +113,49 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
 
   public [Symbol.dispose](): void {
     this.dispose()
+  }
+
+  private _font = '14px sans-serif'
+  private _fontWidthCache: Map<string, Record<number, number>> = new Map()
+  protected ellipsisWidth = 0
+
+  private getFontCache() {
+    if (!this._fontWidthCache.has(this._font))
+      this._fontWidthCache.set(this._font, {})
+    return this._fontWidthCache.get(this._font)!
+  }
+
+  protected setFont(font: string) {
+    this._font = font
+    this.c.font = font
+    this.ellipsisWidth = 3 * this.charCodeWidth(CONSTANT_DOT_CHAR_CODE)
+  }
+
+  protected charCodeWidth(ch: number): number {
+    const cache = this.getFontCache()
+    let width = cache[ch]
+    if (width === undefined) {
+      width = this.c.measureText(String.fromCharCode(ch)).width
+      cache[ch] = width
+    }
+    return width
+  }
+
+  textOverflowEllipsis(text: string, width: number): [string, number] {
+    if (width < this.ellipsisWidth)
+      return ['', 0]
+    let textWidth = 0
+    const n = text.length
+    let i = 0
+    while (i < n) {
+      const charWidth = this.charCodeWidth(text.charCodeAt(i))
+      if (width < textWidth + this.ellipsisWidth + charWidth) {
+        return [`${text.slice(0, i)}...`, textWidth + this.ellipsisWidth]
+      }
+      textWidth += charWidth
+      i++
+    }
+
+    return [text, textWidth]
   }
 }

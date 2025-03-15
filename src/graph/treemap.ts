@@ -14,7 +14,6 @@ import { GraphContext } from './context'
 
 const CONSTANT_PADDING = 4
 const CONSTANT_HEADER_HEIGHT = 20
-const CONSTANT_DOT_CHAR_CODE = 46
 const CONSTANT_INSET_X = 2 * CONSTANT_PADDING
 const CONSTANT_INSET_Y = CONSTANT_HEADER_HEIGHT + CONSTANT_PADDING
 
@@ -132,10 +131,6 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
   bgOriginX = 0
   bgOriginY = 0
   bgColor = ''
-  normalFont = '14px sans-serif'
-  normalWidthCache: Record<number, number> = {}
-  ellipsisWidth = 0
-  currentWidthCache: Record<number, number> = this.normalWidthCache
   currentNode: NodeLayout<T> | null = null
   currentLayout: NodeLayout<T> | null = null
   previousLayout: NodeLayout<T> | null = null
@@ -211,32 +206,6 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     this.draw()
   }
 
-  charCodeWidth(ch: number): number {
-    let width = this.currentWidthCache[ch]
-    if (width === undefined) {
-      width = this.c.measureText(String.fromCharCode(ch)).width
-      this.currentWidthCache[ch] = width
-    }
-    return width
-  }
-
-  textOverflowEllipsis(text: string, width: number): [string, number] {
-    if (width < this.ellipsisWidth)
-      return ['', 0]
-    let textWidth = 0
-    const n = text.length
-    let i = 0
-    while (i < n) {
-      const charWidth = this.charCodeWidth(text.charCodeAt(i))
-      if (width < textWidth + this.ellipsisWidth + charWidth) {
-        return [`${text.slice(0, i)}...`, textWidth + this.ellipsisWidth]
-      }
-      textWidth += charWidth
-      i++
-    }
-    return [text, textWidth]
-  }
-
   drawNodeBackground(layout: NodeLayout<T>, culling: Culling): DrawFlags {
     const node = layout.node
     const [x, y, w, h] = layout.box
@@ -287,10 +256,6 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
 
     if (h >= CONSTANT_HEADER_HEIGHT) {
       this.c.fillStyle = this.palette.text
-
-      this.c.font = this.normalFont
-      this.currentWidthCache = this.normalWidthCache
-      this.ellipsisWidth = 3 * this.charCodeWidth(CONSTANT_DOT_CHAR_CODE)
 
       // Measure the node name
       const maxWidth = w - CONSTANT_INSET_X
