@@ -60,31 +60,32 @@ function computeRadius(depth: number): number {
 export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
 }
 
+const START_ANGLE = -Math.PI / 2
+
 export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
-  currentNode: TreeNode<T>
-  hoveredNode: TreeNode<T> | undefined
+  private currentNode: TreeNode<T>
+  private hoveredNode: TreeNode<T> | undefined
 
-  START_ANGLE = -Math.PI / 2
-  centerX = 0
-  centerY = 0
-  animationStart = 0
+  private centerX = 0
+  private centerY = 0
+  private animationStart = 0
 
-  sourceDepth = 0
-  sourceStartAngle = this.START_ANGLE
-  sourceSweepAngle = Math.PI * 2
+  private sourceDepth = 0
+  private sourceStartAngle = START_ANGLE
+  private sourceSweepAngle = Math.PI * 2
 
-  targetNode: TreeNode<T>
-  targetDepth = this.sourceDepth
-  targetStartAngle = this.sourceStartAngle
-  targetSweepAngle = this.sourceSweepAngle
+  private targetNode: TreeNode<T>
+  private targetDepth = this.sourceDepth
+  private targetStartAngle = this.sourceStartAngle
+  private targetSweepAngle = this.sourceSweepAngle
 
-  animatedNode: TreeNode<T>
-  animatedDepth = this.sourceDepth
-  animatedStartAngle = this.sourceStartAngle
-  animatedSweepAngle = this.sourceSweepAngle
+  private animatedNode: TreeNode<T>
+  private animatedDepth = this.sourceDepth
+  private animatedStartAngle = this.sourceStartAngle
+  private animatedSweepAngle = this.sourceSweepAngle
 
-  previousHoveredNode: TreeNode<T> | undefined
-  historyStack: TreeNode<T>[] = []
+  private previousHoveredNode: TreeNode<T> | undefined
+  private historyStack: TreeNode<T>[] = []
 
   constructor(tree: Tree<T>, options: CreateSunburstOptions<T> = {}) {
     while (tree.root.children.length === 1) {
@@ -143,7 +144,11 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     this.disposables.push(useWheelEventListener(e => this.handleMouseMove(e)))
   }
 
-  override resize(): void {
+  public select(node: TreeNode<T> | null, animate?: boolean): void {
+    this.changeCurrentNode(node, animate)
+  }
+
+  public override resize(): void {
     const maxRadius = 2 * Math.ceil(computeRadius(this.tree.maxDepth))
     this.width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
     this.height = this.width
@@ -152,19 +157,25 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     super.resize()
   }
 
-  changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
-    node = node || this.tree.root
-    if (this.currentNode !== node) {
-      this.currentNode = node
-      this.updateSunburst(animate)
-      this.events.emit('select', node)
-    }
-  }
+  public override draw(): void {
+    this.c.clearRect(0, 0, this.width, this.height)
 
-  changeHoveredNode(node: TreeNode<T> | undefined, animate?: boolean): void {
-    if (this.hoveredNode !== node) {
-      this.hoveredNode = node
-      this.updateSunburst(animate)
+    // Draw the fill first
+    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
+
+    // Draw the stroke second
+    this.c.strokeStyle = this.palette.stroke
+    this.c.beginPath()
+    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT, -Infinity)
+    this.c.stroke()
+
+    // Draw the size of the current node in the middle
+    if (this.animatedDepth === 0) {
+      this.c.fillStyle = this.palette.stroke
+      this.setFont('bold 16px sans-serif')
+      this.c.textAlign = 'center'
+      this.c.textBaseline = 'middle'
+      this.c.fillText(bytesToText(this.targetNode.size), this.centerX, this.centerY)
     }
   }
 
@@ -172,7 +183,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
   // slices all merging together into a solid color. So we enforce a
   // minimum slice width of 2px and we also skip drawing slices that
   // have a tail edge less than 1.5px from the previous tail edge.
-  drawNode(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number {
+  private drawNode(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number {
     const outerRadius = computeRadius(depth + 1)
     if (outerRadius > this.centerY)
       return prevTailEdge // Don't draw slices that fall outside the canvas bounds
@@ -228,29 +239,23 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     return tailEdge
   }
 
-  draw(): void {
-    this.c.clearRect(0, 0, this.width, this.height)
-
-    // Draw the fill first
-    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
-
-    // Draw the stroke second
-    this.c.strokeStyle = this.palette.stroke
-    this.c.beginPath()
-    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT, -Infinity)
-    this.c.stroke()
-
-    // Draw the size of the current node in the middle
-    if (this.animatedDepth === 0) {
-      this.c.fillStyle = this.palette.stroke
-      this.setFont('bold 16px sans-serif')
-      this.c.textAlign = 'center'
-      this.c.textBaseline = 'middle'
-      this.c.fillText(bytesToText(this.targetNode.size), this.centerX, this.centerY)
+  private changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
+    node = node || this.tree.root
+    if (this.currentNode !== node) {
+      this.currentNode = node
+      this.updateSunburst(animate)
+      this.events.emit('select', node)
     }
   }
 
-  hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
+  private changeHoveredNode(node: TreeNode<T> | undefined, animate?: boolean): void {
+    if (this.hoveredNode !== node) {
+      this.hoveredNode = node
+      this.updateSunburst(animate)
+    }
+  }
+
+  private hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
     let x = mouseEvent.pageX
     let y = mouseEvent.pageY
     for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
@@ -305,7 +310,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
       t = 1
       this.animatedNode = this.targetNode
       this.targetDepth = 0
-      this.targetStartAngle = this.START_ANGLE
+      this.targetStartAngle = START_ANGLE
       this.targetSweepAngle = Math.PI * 2
     }
     else {
@@ -328,7 +333,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     this.draw()
   }
 
-  handleMouseMove(e: MouseEvent): void {
+  private handleMouseMove(e: MouseEvent): void {
     const node = this.hitTestNode(e)
     this.changeHoveredNode(node)
 
@@ -342,7 +347,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     }
   }
 
-  updateSunburst(animate: boolean = this.options.animate ?? true): void {
+  private updateSunburst(animate: boolean = this.options.animate ?? true): void {
     if (this.previousHoveredNode !== this.hoveredNode) {
       this.previousHoveredNode = this.hoveredNode
       if (!this.hoveredNode) {
@@ -374,7 +379,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
       this.animatedStartAngle = slice.startAngle_
       this.animatedSweepAngle = slice.sweepAngle_
       this.targetDepth = 0
-      this.targetStartAngle = this.START_ANGLE
+      this.targetStartAngle = START_ANGLE
       this.targetSweepAngle = Math.PI * 2
       this.animatedNode = this.currentNode
     }
@@ -383,7 +388,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     else if (isParentOf(this.currentNode, this.animatedNode)) {
       const slice: Slice = {
         depth_: 0,
-        startAngle_: this.START_ANGLE,
+        startAngle_: START_ANGLE,
         sweepAngle_: Math.PI * 2,
       }
       narrowSlice(this.currentNode, this.animatedNode, slice)
@@ -401,9 +406,5 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     this.sourceSweepAngle = this.animatedSweepAngle
     this.targetNode = this.currentNode
     this.events.emit('select', this.currentNode)
-  }
-
-  select(node: TreeNode<T> | null, animate?: boolean): void {
-    this.changeCurrentNode(node, animate)
   }
 }

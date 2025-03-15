@@ -141,7 +141,7 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
     return width
   }
 
-  textOverflowEllipsis(text: string, width: number): [string, number] {
+  protected textOverflowEllipsis(text: string, width: number): [string, number] {
     if (width < this.ellipsisWidth)
       return ['', 0]
     let textWidth = 0

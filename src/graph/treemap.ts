@@ -125,63 +125,139 @@ export interface TreemapOptions<T> extends GraphBaseOptions<T> {
 }
 
 export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
-  layoutNodes: NodeLayout<T>[] = []
+  private layoutNodes: NodeLayout<T>[] = []
 
-  hoveredNode: TreeNode<T> | null = null
-  bgOriginX = 0
-  bgOriginY = 0
-  bgColor = ''
-  currentNode: NodeLayout<T> | null = null
-  currentLayout: NodeLayout<T> | null = null
-  previousLayout: NodeLayout<T> | null = null
+  private hoveredNode: TreeNode<T> | null = null
+  private bgOriginX = 0
+  private bgOriginY = 0
+  private currentNode: NodeLayout<T> | null = null
+  private currentLayout: NodeLayout<T> | null = null
+  private previousLayout: NodeLayout<T> | null = null
 
-  currentOriginX = 0
-  currentOriginY = 0
-  animationStart = 0
-  animationBlend = 1
-  animationSource: NodeLayout<T> | null = null
-  animationTarget: NodeLayout<T> | null = null
+  private currentOriginX = 0
+  private currentOriginY = 0
+  private animationStart = 0
+  private animationBlend = 1
+  private animationSource: NodeLayout<T> | null = null
+  private animationTarget: NodeLayout<T> | null = null
 
-  updateCurrentLayout(): void {
-    const selectedPaddingRatio = this.options.selectedPaddingRatio ?? 0.2
-    if (this.currentNode) {
-      const [ox1, oy1, ow, oh] = this.currentNode.box
-      const ox2 = ox1 + ow
-      const oy2 = oy1 + oh
-      const nx1 = Math.round(this.width * selectedPaddingRatio / 2)
-      const ny1 = Math.round(this.height * selectedPaddingRatio / 2)
-      const nx2 = this.width - nx1 - 1
-      const ny2 = this.height - ny1 - 1
-      const t = this.animationTarget ? this.animationBlend : 1 - this.animationBlend
-      const x1 = Math.round(ox1 + (nx1 - ox1) * t)
-      const y1 = Math.round(oy1 + (ny1 - oy1) * t)
-      const x2 = Math.round(ox2 + (nx2 - ox2) * t)
-      const y2 = Math.round(oy2 + (ny2 - oy2) * t)
-      const wrap64 = (x: number) => x - Math.floor(x / 64 - 0.5) * 64
-      this.currentLayout = layoutTreemap([this.currentNode.node], x1, y1, x2 - x1, y2 - y1)[0]
-      this.currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
-      this.currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
+  constructor(tree: Tree<T>, options: TreemapOptions<T> = {}) {
+    super(tree, options)
+
+    this.canvas.addEventListener('mousemove', (e) => {
+      this.updateHover(e)
+    })
+
+    this.canvas.addEventListener('mouseout', (e) => {
+      this.changeHoveredNode(null)
+      this.events.emit('hover', null, e)
+    })
+
+    this.el.addEventListener('click', (e) => {
+      const layout = this.hitTestNode(e)
+      if (layout) {
+        const node = layout.node
+        this.events.emit('click', node, e)
+        if (!node.children.length) {
+          this.updateHover(e)
+        }
+        else if (layout !== this.currentLayout) {
+          this.changeCurrentNode(layout)
+          this.changeHoveredNode(null)
+        }
+        else {
+          this.updateHover(e)
+        }
+      }
+      else if (this.currentNode) {
+        this.changeCurrentNode(null)
+        this.updateHover(e)
+      }
+    })
+
+    this.el.append(this.canvas)
+
+    this.resize()
+    Promise.resolve().then(() => this.resize()) // Resize once the element is in the DOM
+
+    this.disposables.push(useWheelEventListener(e => this.updateHover(e)))
+    this.disposables.push(useResizeEventListener(() => this.resize()))
+  }
+
+  public select(node: TreeNode<T> | null, animate?: boolean) {
+    this.changeCurrentNode(
+      node
+        ? this.searchFor(this.layoutNodes, node)
+        : null,
+      animate,
+    )
+  }
+
+  public override draw(): void {
+    this.c.clearRect(0, 0, this.width, this.height)
+    this.c.textBaseline = 'middle'
+    this.ellipsisWidth = this.c.measureText('...').width
+
+    // Draw the full tree first
+    let _nodeContainingHover: NodeLayout<T> | null = null
+    let nodeContainingTarget: NodeLayout<T> | null = null
+    const transition = !this.currentLayout
+      ? 0
+      : !this.animationSource
+          ? this.animationBlend
+          : !this.animationTarget ? 1 - this.animationBlend : 1
+    this.bgOriginX = this.bgOriginY = 0
+    for (const node of this.layoutNodes) {
+      const flags = this.drawNodeBackground(node, Culling.Enabled)
+      if (flags & DrawFlags.CONTAINS_HOVER)
+        _nodeContainingHover = node
+      if (flags & DrawFlags.CONTAINS_TARGET)
+        nodeContainingTarget = node
     }
-    else {
-      this.currentLayout = null
-      this.currentOriginX = 0
-      this.currentOriginY = 0
+    for (const node of this.layoutNodes) {
+      this.drawNodeForeground(node, false)
+
+      // Fade out nodes that are not activated
+      if (this.currentLayout) {
+        const [x, y, w, h] = node.box
+        this.c.globalAlpha = 0.6 * (!this.currentLayout || (!this.animationSource && nodeContainingTarget && node !== nodeContainingTarget)
+          ? 1
+          : transition)
+        this.c.fillStyle = this.palette.bg
+        this.c.fillRect(x, y, w, h)
+        this.c.globalAlpha = 1
+      }
+    }
+
+    // Draw the previous node
+    if (this.previousLayout) {
+      this.drawNodeBackground(this.previousLayout, Culling.Disabled)
+      this.drawNodeForeground(this.previousLayout, true)
+    }
+
+    // Draw the current node on top
+    if (this.currentLayout) {
+      const [x, y, w, h] = this.currentLayout.box
+      const matrix = this.c.getTransform()
+      const scale = Math.sqrt(matrix.a * matrix.d)
+
+      // Draw a shadow under the node
+      this.c.save()
+      this.c.shadowColor = this.palette.shadow
+      this.c.shadowBlur = scale * (30 * transition)
+      this.c.shadowOffsetX = scale * (2 * this.width)
+      this.c.shadowOffsetY = scale * (2 * this.height + 15 * transition)
+      this.c.fillRect(x - 2 * this.width, y - 2 * this.height, w, h)
+      this.c.restore()
+
+      this.bgOriginX = this.currentOriginX
+      this.bgOriginY = this.currentOriginY
+      this.drawNodeBackground(this.currentLayout, Culling.Disabled)
+      this.drawNodeForeground(this.currentLayout, true)
     }
   }
 
-  override resize(): void {
-    const oldWidth = this.width
-    const oldHeight = this.height
-    this.width = Math.min(this.el.clientWidth, 1600)
-    this.height = Math.max(Math.round(this.width / 2), innerHeight - 200)
-    if (this.width !== oldWidth || this.height !== oldHeight) {
-      this.layoutNodes = layoutTreemap([this.tree.root], 0, 0, this.width - 1, this.height - 1)
-      this.updateCurrentLayout()
-    }
-    super.resize()
-  }
-
-  override tick(): void {
+  public override tick(): void {
     const oldAnimationBlend = this.animationBlend
     const oldCurrentNode = this.currentNode
     this.animationBlend = (now() - this.animationStart) / (this.options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
@@ -206,7 +282,19 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     this.draw()
   }
 
-  drawNodeBackground(layout: NodeLayout<T>, culling: Culling): DrawFlags {
+  public override resize(): void {
+    const oldWidth = this.width
+    const oldHeight = this.height
+    this.width = Math.min(this.el.clientWidth, 1600)
+    this.height = Math.max(Math.round(this.width / 2), innerHeight - 200)
+    if (this.width !== oldWidth || this.height !== oldHeight) {
+      this.layoutNodes = layoutTreemap([this.tree.root], 0, 0, this.width - 1, this.height - 1)
+      this.updateCurrentLayout()
+    }
+    super.resize()
+  }
+
+  private drawNodeBackground(layout: NodeLayout<T>, culling: Culling): DrawFlags {
     const node = layout.node
     const [x, y, w, h] = layout.box
     let flags = (node === this.hoveredNode ? DrawFlags.CONTAINS_HOVER : 0)
@@ -242,7 +330,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     return flags
   }
 
-  drawNodeForeground(layout: NodeLayout<T>, inCurrentNode: boolean): void {
+  private drawNodeForeground(layout: NodeLayout<T>, inCurrentNode: boolean): void {
     const node = layout.node
     const [x, y, w, h] = layout.box
 
@@ -297,73 +385,34 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     }
   }
 
-  draw(): void {
-    this.bgColor = this.palette.bg
-
-    this.c.clearRect(0, 0, this.width, this.height)
-    this.c.textBaseline = 'middle'
-    this.ellipsisWidth = this.c.measureText('...').width
-
-    // Draw the full tree first
-    let _nodeContainingHover: NodeLayout<T> | null = null
-    let nodeContainingTarget: NodeLayout<T> | null = null
-    const transition = !this.currentLayout
-      ? 0
-      : !this.animationSource
-          ? this.animationBlend
-          : !this.animationTarget ? 1 - this.animationBlend : 1
-    this.bgOriginX = this.bgOriginY = 0
-    for (const node of this.layoutNodes) {
-      const flags = this.drawNodeBackground(node, Culling.Enabled)
-      if (flags & DrawFlags.CONTAINS_HOVER)
-        _nodeContainingHover = node
-      if (flags & DrawFlags.CONTAINS_TARGET)
-        nodeContainingTarget = node
+  private updateCurrentLayout(): void {
+    const selectedPaddingRatio = this.options.selectedPaddingRatio ?? 0.2
+    if (this.currentNode) {
+      const [ox1, oy1, ow, oh] = this.currentNode.box
+      const ox2 = ox1 + ow
+      const oy2 = oy1 + oh
+      const nx1 = Math.round(this.width * selectedPaddingRatio / 2)
+      const ny1 = Math.round(this.height * selectedPaddingRatio / 2)
+      const nx2 = this.width - nx1 - 1
+      const ny2 = this.height - ny1 - 1
+      const t = this.animationTarget ? this.animationBlend : 1 - this.animationBlend
+      const x1 = Math.round(ox1 + (nx1 - ox1) * t)
+      const y1 = Math.round(oy1 + (ny1 - oy1) * t)
+      const x2 = Math.round(ox2 + (nx2 - ox2) * t)
+      const y2 = Math.round(oy2 + (ny2 - oy2) * t)
+      const wrap64 = (x: number) => x - Math.floor(x / 64 - 0.5) * 64
+      this.currentLayout = layoutTreemap([this.currentNode.node], x1, y1, x2 - x1, y2 - y1)[0]
+      this.currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
+      this.currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
     }
-    for (const node of this.layoutNodes) {
-      this.drawNodeForeground(node, false)
-
-      // Fade out nodes that are not activated
-      if (this.currentLayout) {
-        const [x, y, w, h] = node.box
-        this.c.globalAlpha = 0.6 * (!this.currentLayout || (!this.animationSource && nodeContainingTarget && node !== nodeContainingTarget)
-          ? 1
-          : transition)
-        this.c.fillStyle = this.bgColor
-        this.c.fillRect(x, y, w, h)
-        this.c.globalAlpha = 1
-      }
-    }
-
-    // Draw the previous node
-    if (this.previousLayout) {
-      this.drawNodeBackground(this.previousLayout, Culling.Disabled)
-      this.drawNodeForeground(this.previousLayout, true)
-    }
-
-    // Draw the current node on top
-    if (this.currentLayout) {
-      const [x, y, w, h] = this.currentLayout.box
-      const matrix = this.c.getTransform()
-      const scale = Math.sqrt(matrix.a * matrix.d)
-
-      // Draw a shadow under the node
-      this.c.save()
-      this.c.shadowColor = this.palette.shadow
-      this.c.shadowBlur = scale * (30 * transition)
-      this.c.shadowOffsetX = scale * (2 * this.width)
-      this.c.shadowOffsetY = scale * (2 * this.height + 15 * transition)
-      this.c.fillRect(x - 2 * this.width, y - 2 * this.height, w, h)
-      this.c.restore()
-
-      this.bgOriginX = this.currentOriginX
-      this.bgOriginY = this.currentOriginY
-      this.drawNodeBackground(this.currentLayout, Culling.Disabled)
-      this.drawNodeForeground(this.currentLayout, true)
+    else {
+      this.currentLayout = null
+      this.currentOriginX = 0
+      this.currentOriginY = 0
     }
   }
 
-  hitTestNode(mouseEvent: MouseEvent | WheelEvent): NodeLayout<T> | null {
+  private hitTestNode(mouseEvent: MouseEvent | WheelEvent): NodeLayout<T> | null {
     let mouseX = mouseEvent.pageX
     let mouseY = mouseEvent.pageY
     for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
@@ -386,7 +435,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
       : visit(this.layoutNodes, true)
   }
 
-  updateHover(e: MouseEvent): void {
+  private updateHover(e: MouseEvent): void {
     const layout = this.hitTestNode(e)
     this.changeHoveredNode(layout && layout.node)
 
@@ -394,7 +443,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     this.events.emit('hover', layout?.node || null, e)
   }
 
-  changeHoveredNode(node: TreeNode<T> | null): void {
+  private changeHoveredNode(node: TreeNode<T> | null): void {
     if (this.hoveredNode !== node) {
       this.hoveredNode = node
       this.canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
@@ -402,7 +451,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     }
   }
 
-  searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
+  private searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
     for (const child of children) {
       const result = child.node === node ? child : this.searchFor(child.children, node)
       if (result)
@@ -411,7 +460,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     return null
   }
 
-  changeCurrentNode(node: NodeLayout<T> | null, animate = this.options.animate): void {
+  private changeCurrentNode(node: NodeLayout<T> | null, animate = this.options.animate): void {
     if (this.currentNode !== node) {
       this.events.emit('select', node?.node || null)
       this.previousLayout = node ? this.currentLayout : null
@@ -425,57 +474,5 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
       this.updateCurrentLayout()
       this.invalidate()
     }
-  }
-
-  constructor(tree: Tree<T>, options: TreemapOptions<T> = {}) {
-    super(tree, options)
-
-    this.canvas.addEventListener('mousemove', (e) => {
-      this.updateHover(e)
-    })
-
-    this.canvas.addEventListener('mouseout', (e) => {
-      this.changeHoveredNode(null)
-      this.events.emit('hover', null, e)
-    })
-
-    this.el.addEventListener('click', (e) => {
-      const layout = this.hitTestNode(e)
-      if (layout) {
-        const node = layout.node
-        this.events.emit('click', node, e)
-        if (!node.children.length) {
-          this.updateHover(e)
-        }
-        else if (layout !== this.currentLayout) {
-          this.changeCurrentNode(layout)
-          this.changeHoveredNode(null)
-        }
-        else {
-          this.updateHover(e)
-        }
-      }
-      else if (this.currentNode) {
-        this.changeCurrentNode(null)
-        this.updateHover(e)
-      }
-    })
-
-    this.el.append(this.canvas)
-
-    this.resize()
-    Promise.resolve().then(() => this.resize()) // Resize once the element is in the DOM
-
-    this.disposables.push(useWheelEventListener(e => this.updateHover(e)))
-    this.disposables.push(useResizeEventListener(() => this.resize()))
-  }
-
-  select(node: TreeNode<T> | null, animate?: boolean) {
-    this.changeCurrentNode(
-      node
-        ? this.searchFor(this.layoutNodes, node)
-        : null,
-      animate,
-    )
   }
 }

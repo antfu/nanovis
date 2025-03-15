@@ -26,18 +26,18 @@ const CONSTANT_NORMAL_FONT = '14px sans-serif'
 const CONSTANT_BOLD_FONT = `bold ${CONSTANT_NORMAL_FONT}`
 
 export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
-  mainEl = document.createElement('div')
+  private mainEl = document.createElement('div')
 
-  totalBytes: number
-  viewportMin: number
-  viewportMax: number
+  private totalBytes: number
+  private viewportMin: number
+  private viewportMax: number
 
-  zoomedOutMin = 0
-  zoomedOutWidth = 0
-  prevWheelTime = 0
-  prevWheelWasZoom = false
-  stripeScaleAdjust = 1
-  hoveredNode: TreeNode<T> | null = null
+  private zoomedOutMin = 0
+  private zoomedOutWidth = 0
+  private prevWheelTime = 0
+  private prevWheelWasZoom = false
+  private stripeScaleAdjust = 1
+  private hoveredNode: TreeNode<T> | null = null
 
   constructor(tree: Tree<T>, userOptions: CreateFlamegraphOptions<T> = {}) {
     super(tree, userOptions)
@@ -135,16 +135,28 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     this.el.append(this.mainEl)
   }
 
-  changeHoveredNode(node: TreeNode<T> | null): void {
-    if (this.hoveredNode !== node) {
-      this.hoveredNode = node
-      this.events.emit('select', node)
-      this.canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
-      this.invalidate()
+  public override tick(): void {
+    this.draw()
+  }
+
+  public override draw(): void {
+    let startBytes = 0
+    let rightEdge = -Infinity
+
+    this.c.clearRect(0, 0, this.width, this.height)
+    this.c.textBaseline = 'middle'
+
+    for (const child of this.tree.root.children) {
+      rightEdge = this.drawNode(child, 0, startBytes, rightEdge, FLAGS.OUTPUT)
+      startBytes += child.size
     }
   }
 
-  override resize(): void {
+  public select(node: TreeNode<T> | null): void {
+    this.changeHoveredNode(node)
+  }
+
+  public override resize(): void {
     this.width = this.el.clientWidth
     this.height = this.tree.maxDepth * CONSTANT_ROW_HEIGHT + 1
     this.zoomedOutMin = (this.width - CONSTANT_ZOOMED_OUT_WIDTH) >> 1
@@ -250,20 +262,12 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     return rightEdge
   }
 
-  override tick(): void {
-    this.draw()
-  }
-
-  override draw(): void {
-    let startBytes = 0
-    let rightEdge = -Infinity
-
-    this.c.clearRect(0, 0, this.width, this.height)
-    this.c.textBaseline = 'middle'
-
-    for (const child of this.tree.root.children) {
-      rightEdge = this.drawNode(child, 0, startBytes, rightEdge, FLAGS.OUTPUT)
-      startBytes += child.size
+  private changeHoveredNode(node: TreeNode<T> | null): void {
+    if (this.hoveredNode !== node) {
+      this.hoveredNode = node
+      this.events.emit('select', node)
+      this.canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
+      this.invalidate()
     }
   }
 
@@ -346,9 +350,5 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
 
     // Show a tooltip for hovered nodes
     this.events.emit('hover', node, e)
-  }
-
-  select(node: TreeNode<T> | null): void {
-    this.changeHoveredNode(node)
   }
 }
