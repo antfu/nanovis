@@ -2,7 +2,7 @@
 import type { TreeNode } from 'nanovis'
 import type { Metafile } from 'nanovis/esbuild'
 import { useMouse } from '@vueuse/core'
-import { createColorGetterSpectrum, createFlamegraph, createSunburst, createTreemap } from 'nanovis'
+import { createColorGetterSpectrum, Flamegraph, Sunburst, Treemap } from 'nanovis'
 import { esbuildMetafileToTree } from 'nanovis/esbuild'
 import { onMounted, onUnmounted, reactive, shallowRef, useTemplateRef } from 'vue'
 import data from '../data/esbuild-analyze-example-metafile.json'
@@ -36,11 +36,11 @@ const options = {
 const el = useTemplateRef('el')
 
 onMounted(() => {
-  const treemap = createTreemap(tree, { ...options, getColor: createColorGetterSpectrum(tree, 0.6) })
+  const treemap = new Treemap(tree, { ...options, getColor: createColorGetterSpectrum(tree, 0.6) })
   el.value!.appendChild(treemap.el)
-  const flamegraph = createFlamegraph(tree, options)
+  const flamegraph = new Flamegraph(tree, options)
   el.value!.appendChild(flamegraph.el)
-  const sunburst = createSunburst(tree, options)
+  const sunburst = new Sunburst(tree, options)
   el.value!.appendChild(sunburst.el)
 
   onUnmounted(() => {

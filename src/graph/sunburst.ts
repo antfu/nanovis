@@ -1,4 +1,4 @@
-import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import type { GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import { colorToCanvasFill } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
@@ -7,7 +7,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { createGraphContext } from './context'
+import { GraphContext } from './context'
 
 // eslint-disable-next-line no-restricted-syntax
 const enum FLAGS {
@@ -60,87 +60,134 @@ function computeRadius(depth: number): number {
 export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
 }
 
-export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOptions<T> = {}) {
-  const ctx = createGraphContext(tree, userOptions)
-  const { el, events, disposables, options, palette, getColor } = ctx
+export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
+  currentNode: TreeNode<T>
+  hoveredNode: TreeNode<T> | undefined
 
-  while (tree.root.children.length === 1) {
-    tree = {
-      root: tree.root.children[0],
-      maxDepth: tree.maxDepth - 1,
+  START_ANGLE = -Math.PI / 2
+  width = 0
+  height = 0
+  centerX = 0
+  centerY = 0
+
+  animationFrame: number | null = null
+  animationStart = 0
+
+  sourceDepth = 0
+  sourceStartAngle = this.START_ANGLE
+  sourceSweepAngle = Math.PI * 2
+
+  targetNode: TreeNode<T>
+  targetDepth = this.sourceDepth
+  targetStartAngle = this.sourceStartAngle
+  targetSweepAngle = this.sourceSweepAngle
+
+  animatedNode: TreeNode<T>
+  animatedDepth = this.sourceDepth
+  animatedStartAngle = this.sourceStartAngle
+  animatedSweepAngle = this.sourceSweepAngle
+
+  previousHoveredNode: TreeNode<T> | undefined
+  historyStack: TreeNode<T>[] = []
+
+  constructor(tree: Tree<T>, options: CreateSunburstOptions<T> = {}) {
+    while (tree.root.children.length === 1) {
+      tree = {
+        root: tree.root.children[0],
+        maxDepth: tree.maxDepth - 1,
+      }
+    }
+    super(tree, options)
+
+    this.currentNode = tree.root
+    this.targetNode = this.currentNode
+    this.animatedNode = this.currentNode
+
+    this.canvas.onmousemove = (e) => {
+      this.handleMouseMove(e)
+    }
+
+    this.canvas.onmouseout = (e) => {
+      this.changeHoveredNode(undefined)
+      this.events.emit('hover', null, e)
+    }
+
+    this.canvas.onclick = (e) => {
+      let node = this.hitTestNode(e)
+      if (!node)
+        return
+      this.events.emit('click', node, e)
+
+      let stack: TreeNode<T>[] = []
+
+      // Handle clicking in the middle node
+      if (node !== this.animatedNode.parent) {
+        stack = this.historyStack.concat(this.currentNode)
+      }
+      else if (this.historyStack.length > 0) {
+        node = this.historyStack.pop()!
+        stack = this.historyStack.slice()
+      }
+
+      this.events.emit('click', node, e)
+      if (node.children.length > 0) {
+        this.changeCurrentNode(node)
+        this.historyStack = stack
+      }
+      else {
+        e.preventDefault() // Prevent the browser from removing the focus on the dialog
+      }
+    }
+
+    this.el.append(this.canvas)
+
+    this.resize()
+    Promise.resolve().then(() => this.resize())
+    this.disposables.push(useResizeEventListener(() => this.resize()))
+    this.disposables.push(useWheelEventListener(e => this.handleMouseMove(e)))
+  }
+
+  changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
+    node = node || this.tree.root
+    if (this.currentNode !== node) {
+      this.currentNode = node
+      this.updateSunburst(animate)
+      this.events.emit('select', node)
     }
   }
 
-  let currentNode = tree.root
-  let hoveredNode: TreeNode<T> | undefined
-
-  const START_ANGLE = -Math.PI / 2
-  let width = 0
-  let height = 0
-  let centerX = 0
-  let centerY = 0
-
-  let animationFrame: number | null = null
-  let animationStart = 0
-
-  let sourceDepth = 0
-  let sourceStartAngle = START_ANGLE
-  let sourceSweepAngle = Math.PI * 2
-
-  let targetNode = currentNode
-  let targetDepth = sourceDepth
-  let targetStartAngle = sourceStartAngle
-  let targetSweepAngle = sourceSweepAngle
-
-  let animatedNode = currentNode
-  let animatedDepth = sourceDepth
-  let animatedStartAngle = sourceStartAngle
-  let animatedSweepAngle = sourceSweepAngle
-
-  function changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
-    node = node || tree.root
-    if (currentNode !== node) {
-      currentNode = node
-      updateSunburst(animate)
-      events.emit('select', node)
+  changeHoveredNode(node: TreeNode<T> | undefined, animate?: boolean): void {
+    if (this.hoveredNode !== node) {
+      this.hoveredNode = node
+      this.updateSunburst(animate)
     }
   }
 
-  function changeHoveredNode(node: TreeNode<T> | undefined, animate?: boolean): void {
-    if (hoveredNode !== node) {
-      hoveredNode = node
-      updateSunburst(animate)
-    }
-  }
-
-  const canvas = document.createElement('canvas')
-  const c = canvas.getContext('2d')!
-
-  function resize(): void {
-    const maxRadius = 2 * Math.ceil(computeRadius(tree.maxDepth))
+  resize(): void {
+    const maxRadius = 2 * Math.ceil(computeRadius(this.tree.maxDepth))
     const ratio = window.devicePixelRatio || 1
-    width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
-    height = width
-    centerX = width >> 1
-    centerY = height >> 1
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-    canvas.width = Math.round(width * ratio)
-    canvas.height = Math.round(height * ratio)
-    c.scale(ratio, ratio)
-    draw()
+    this.width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
+    this.height = this.width
+    this.centerX = this.width >> 1
+    this.centerY = this.height >> 1
+    this.canvas.style.width = `${this.width}px`
+    this.canvas.style.height = `${this.height}px`
+    this.canvas.width = Math.round(this.width * ratio)
+    this.canvas.height = Math.round(this.height * ratio)
+    this.c.scale(ratio, ratio)
+    this.draw()
   }
 
   // We want to avoid overlapping strokes from lots of really small adjacent
   // slices all merging together into a solid color. So we enforce a
   // minimum slice width of 2px and we also skip drawing slices that
   // have a tail edge less than 1.5px from the previous tail edge.
-  function drawNode(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number {
+  drawNode(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number {
     const outerRadius = computeRadius(depth + 1)
-    if (outerRadius > centerY)
+    if (outerRadius > this.centerY)
       return prevTailEdge // Don't draw slices that fall outside the canvas bounds
 
-    if (node === hoveredNode) {
+    if (node === this.hoveredNode) {
       flags |= FLAGS.HOVER
     }
 
@@ -154,14 +201,14 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
 
     // Handle the fill
     if (flags & FLAGS.FILL) {
-      c.fillStyle = colorToCanvasFill(getColor(node) || palette.fallback, c, centerX, centerY, 1)
-      c.beginPath()
-      c.arc(centerX, centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
-      c.arc(centerX, centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
-      c.fill()
-      if (hoveredNode && (flags & FLAGS.HOVER || node.parent === hoveredNode)) {
-        c.fillStyle = palette.hover
-        c.fill()
+      this.c.fillStyle = colorToCanvasFill(this.getColor(node) || this.palette.fallback, this.c, this.centerX, this.centerY, 1)
+      this.c.beginPath()
+      this.c.arc(this.centerX, this.centerY, innerRadius, startAngle, startAngle + clampedSweepAngle, false)
+      this.c.arc(this.centerX, this.centerY, outerRadius, startAngle + clampedSweepAngle, startAngle, true)
+      this.c.fill()
+      if (this.hoveredNode && (flags & FLAGS.HOVER || node.parent === this.hoveredNode)) {
+        this.c.fillStyle = this.palette.hover
+        this.c.fill()
       }
     }
 
@@ -170,11 +217,11 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
       const isFullCircle = clampedSweepAngle === Math.PI * 2
       const moveToRadius = flags & FLAGS.CHAIN || isFullCircle ? outerRadius : innerRadius
       if (flags & FLAGS.ROOT && innerRadius > 0)
-        c.arc(centerX, centerY, innerRadius, startAngle + clampedSweepAngle, startAngle, true)
-      c.moveTo(centerX + moveToRadius * Math.cos(startAngle), centerY + moveToRadius * Math.sin(startAngle))
-      c.arc(centerX, centerY, outerRadius, startAngle, startAngle + clampedSweepAngle, false)
+        this.c.arc(this.centerX, this.centerY, innerRadius, startAngle + clampedSweepAngle, startAngle, true)
+      this.c.moveTo(this.centerX + moveToRadius * Math.cos(startAngle), this.centerY + moveToRadius * Math.sin(startAngle))
+      this.c.arc(this.centerX, this.centerY, outerRadius, startAngle, startAngle + clampedSweepAngle, false)
       if (!isFullCircle)
-        c.lineTo(centerX + innerRadius * Math.cos(startAngle + clampedSweepAngle), centerY + innerRadius * Math.sin(startAngle + clampedSweepAngle))
+        this.c.lineTo(this.centerX + innerRadius * Math.cos(startAngle + clampedSweepAngle), this.centerY + innerRadius * Math.sin(startAngle + clampedSweepAngle))
     }
 
     const totalBytes = node.size
@@ -183,7 +230,7 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
     let childTailEdge = -Infinity
 
     for (const child of node.children) {
-      childTailEdge = drawNode(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.size / totalBytes * sweepAngle, childFlags, childTailEdge)
+      childTailEdge = this.drawNode(child, depth + 1, outerRadius, startAngle + sweepAngle * bytesSoFar / totalBytes, child.size / totalBytes * sweepAngle, childFlags, childTailEdge)
       bytesSoFar += child.size
       childFlags |= FLAGS.CHAIN
     }
@@ -191,44 +238,44 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
     return tailEdge
   }
 
-  function draw(): void {
-    c.clearRect(0, 0, width, height)
+  draw(): void {
+    this.c.clearRect(0, 0, this.width, this.height)
 
     // Draw the fill first
-    drawNode(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
+    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
 
     // Draw the stroke second
-    c.strokeStyle = palette.stroke
-    c.beginPath()
-    drawNode(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle, FLAGS.ROOT, -Infinity)
-    c.stroke()
+    this.c.strokeStyle = this.palette.stroke
+    this.c.beginPath()
+    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT, -Infinity)
+    this.c.stroke()
 
     // Draw the size of the current node in the middle
-    if (animatedDepth === 0) {
-      c.fillStyle = palette.stroke
-      c.font = 'bold 16px sans-serif'
-      c.textAlign = 'center'
-      c.textBaseline = 'middle'
-      c.fillText(bytesToText(targetNode.size), centerX, centerY)
+    if (this.animatedDepth === 0) {
+      this.c.fillStyle = this.palette.stroke
+      this.c.font = 'bold 16px sans-serif'
+      this.c.textAlign = 'center'
+      this.c.textBaseline = 'middle'
+      this.c.fillText(bytesToText(this.targetNode.size), this.centerX, this.centerY)
     }
   }
 
-  function hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
+  hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
     let x = mouseEvent.pageX
     let y = mouseEvent.pageY
-    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
+    for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
       x -= el.offsetLeft
       y -= el.offsetTop
     }
 
-    x -= centerX
-    y -= centerY
+    x -= this.centerX
+    y -= this.centerY
     const mouseRadius = Math.sqrt(x * x + y * y)
     const mouseAngle = Math.atan2(y, x)
 
-    function visit(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | undefined {
+    const visit = (node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | undefined => {
       const outerRadius = computeRadius(depth + 1)
-      if (outerRadius > centerY)
+      if (outerRadius > this.centerY)
         return undefined // Don't draw slices that fall outside the canvas bounds
 
       // Hit-test the current node
@@ -238,7 +285,7 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
         deltaAngle -= Math.floor(deltaAngle)
         deltaAngle *= Math.PI * 2
         if (deltaAngle < sweepAngle) {
-          if (node === animatedNode)
+          if (node === this.animatedNode)
             return node.parent
           return node
         }
@@ -258,19 +305,19 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
       return undefined
     }
 
-    return visit(animatedNode, animatedDepth, computeRadius(animatedDepth), animatedStartAngle, animatedSweepAngle)
+    return visit(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle)
   }
 
-  function tick(): void {
-    let t = (now() - animationStart) / (options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
+  tick(): void {
+    let t = (now() - this.animationStart) / (this.options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
 
     if (t < 0 || t > 1) {
       t = 1
-      animationFrame = null
-      animatedNode = targetNode
-      targetDepth = 0
-      targetStartAngle = START_ANGLE
-      targetSweepAngle = Math.PI * 2
+      this.animationFrame = null
+      this.animatedNode = this.targetNode
+      this.targetDepth = 0
+      this.targetStartAngle = this.START_ANGLE
+      this.targetSweepAngle = Math.PI * 2
     }
     else {
       // Use a cubic "ease-in-out" curve
@@ -282,143 +329,94 @@ export function createSunburst<T>(tree: Tree<T>, userOptions: CreateSunburstOpti
         t *= 4 * t * t
         t = 1 - t
       }
-      animationFrame = requestAnimationFrame(tick)
+      this.animationFrame = requestAnimationFrame(() => this.tick())
     }
 
-    animatedDepth = sourceDepth + (targetDepth - sourceDepth) * t
-    animatedStartAngle = sourceStartAngle + (targetStartAngle - sourceStartAngle) * t
-    animatedSweepAngle = sourceSweepAngle + (targetSweepAngle - sourceSweepAngle) * t
+    this.animatedDepth = this.sourceDepth + (this.targetDepth - this.sourceDepth) * t
+    this.animatedStartAngle = this.sourceStartAngle + (this.targetStartAngle - this.sourceStartAngle) * t
+    this.animatedSweepAngle = this.sourceSweepAngle + (this.targetSweepAngle - this.sourceSweepAngle) * t
 
-    draw()
+    this.draw()
   }
 
-  let previousHoveredNode: TreeNode<T> | undefined
-  let historyStack: TreeNode<T>[] = []
-  function handleMouseMove(e: MouseEvent): void {
-    const node = hitTestNode(e)
-    changeHoveredNode(node)
+  handleMouseMove(e: MouseEvent): void {
+    const node = this.hitTestNode(e)
+    this.changeHoveredNode(node)
 
     // Show a tooltip for hovered nodes
-    if (node && node !== animatedNode.parent) {
-      events.emit('hover', node, e)
-      canvas.style.cursor = 'pointer'
+    if (node && node !== this.animatedNode.parent) {
+      this.events.emit('hover', node, e)
+      this.canvas.style.cursor = 'pointer'
     }
     else {
-      events.emit('hover', null, e)
+      this.events.emit('hover', null, e)
     }
   }
 
-  resize()
-  disposables.push(useResizeEventListener(resize))
-  disposables.push(useWheelEventListener(handleMouseMove))
-
-  canvas.onmousemove = (e) => {
-    handleMouseMove(e)
-  }
-
-  canvas.onmouseout = (e) => {
-    changeHoveredNode(undefined)
-    events.emit('hover', null, e)
-  }
-
-  canvas.onclick = (e) => {
-    let node = hitTestNode(e)
-    if (!node)
-      return
-    events.emit('click', node, e)
-
-    let stack: TreeNode<T>[] = []
-
-    // Handle clicking in the middle node
-    if (node !== animatedNode.parent) {
-      stack = historyStack.concat(currentNode)
-    }
-    else if (historyStack.length > 0) {
-      node = historyStack.pop()!
-      stack = historyStack.slice()
-    }
-
-    events.emit('click', node, e)
-    if (node.children.length > 0) {
-      changeCurrentNode(node)
-      historyStack = stack
-    }
-    else {
-      e.preventDefault() // Prevent the browser from removing the focus on the dialog
-    }
-  }
-
-  function updateSunburst(animate: boolean = options.animate ?? true): void {
-    if (previousHoveredNode !== hoveredNode) {
-      previousHoveredNode = hoveredNode
-      if (!hoveredNode) {
-        canvas.style.cursor = 'auto'
-        events.emit('hover', null)
+  updateSunburst(animate: boolean = this.options.animate ?? true): void {
+    if (this.previousHoveredNode !== this.hoveredNode) {
+      this.previousHoveredNode = this.hoveredNode
+      if (!this.hoveredNode) {
+        this.canvas.style.cursor = 'auto'
+        this.events.emit('hover', null)
       }
-      if (animationFrame === null)
-        animationFrame = requestAnimationFrame(tick)
+      if (this.animationFrame === null)
+        this.animationFrame = requestAnimationFrame(() => this.tick())
     }
 
-    if (targetNode === currentNode)
+    if (this.targetNode === this.currentNode)
       return
-    historyStack.length = 0
+    this.historyStack.length = 0
 
-    if (animationFrame === null)
-      animationFrame = requestAnimationFrame(tick)
+    if (this.animationFrame === null)
+      this.animationFrame = requestAnimationFrame(() => this.tick())
 
     if (animate) {
-      animationStart = now()
+      this.animationStart = now()
     }
 
     // Animate from parent to child
-    if (isParentOf(animatedNode, currentNode)) {
+    if (isParentOf(this.animatedNode, this.currentNode)) {
       const slice: Slice = {
-        depth_: animatedDepth,
-        startAngle_: animatedStartAngle,
-        sweepAngle_: animatedSweepAngle,
+        depth_: this.animatedDepth,
+        startAngle_: this.animatedStartAngle,
+        sweepAngle_: this.animatedSweepAngle,
       }
-      narrowSlice(animatedNode, currentNode, slice)
-      animatedDepth = slice.depth_
-      animatedStartAngle = slice.startAngle_
-      animatedSweepAngle = slice.sweepAngle_
-      targetDepth = 0
-      targetStartAngle = START_ANGLE
-      targetSweepAngle = Math.PI * 2
-      animatedNode = currentNode
+      narrowSlice(this.animatedNode, this.currentNode, slice)
+      this.animatedDepth = slice.depth_
+      this.animatedStartAngle = slice.startAngle_
+      this.animatedSweepAngle = slice.sweepAngle_
+      this.targetDepth = 0
+      this.targetStartAngle = this.START_ANGLE
+      this.targetSweepAngle = Math.PI * 2
+      this.animatedNode = this.currentNode
     }
 
     // Animate from child to parent
-    else if (isParentOf(currentNode, animatedNode)) {
+    else if (isParentOf(this.currentNode, this.animatedNode)) {
       const slice: Slice = {
         depth_: 0,
-        startAngle_: START_ANGLE,
+        startAngle_: this.START_ANGLE,
         sweepAngle_: Math.PI * 2,
       }
-      narrowSlice(currentNode, animatedNode, slice)
-      targetDepth = slice.depth_
-      targetStartAngle = slice.startAngle_
-      targetSweepAngle = slice.sweepAngle_
+      narrowSlice(this.currentNode, this.animatedNode, slice)
+      this.targetDepth = slice.depth_
+      this.targetStartAngle = slice.startAngle_
+      this.targetSweepAngle = slice.sweepAngle_
     }
     else {
-      animationStart = -Infinity
-      animatedNode = currentNode
+      this.animationStart = -Infinity
+      this.animatedNode = this.currentNode
     }
 
-    sourceDepth = animatedDepth
-    sourceStartAngle = animatedStartAngle
-    sourceSweepAngle = animatedSweepAngle
-    targetNode = currentNode
-    events.emit('select', currentNode)
+    this.sourceDepth = this.animatedDepth
+    this.sourceStartAngle = this.animatedStartAngle
+    this.sourceSweepAngle = this.animatedSweepAngle
+    this.targetNode = this.currentNode
+    this.events.emit('select', this.currentNode)
   }
 
-  el.append(canvas)
-
-  return {
-    ...ctx,
-    draw,
-    resize,
-    select: (node: TreeNode<T> | null, animate?: boolean) => {
-      changeCurrentNode(node, animate)
-    },
-  } satisfies GraphBase<T>
+  select(node: TreeNode<T> | null, animate?: boolean): void {
+    this.changeCurrentNode(node, animate)
+  }
 }

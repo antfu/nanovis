@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import type { GraphBase, GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import type { GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import {
   colorToCanvasFill,
 } from '../utils/color'
@@ -10,7 +10,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { createGraphContext } from './context'
+import { GraphContext } from './context'
 
 const CONSTANT_PADDING = 4
 const CONSTANT_HEADER_HEIGHT = 20
@@ -125,133 +125,125 @@ export interface TreemapOptions<T> extends GraphBaseOptions<T> {
   selectedPaddingRatio?: number
 }
 
-export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> = {}) {
-  const ctx = createGraphContext(tree, userOptions)
-  const { el, events, disposables, palette, options, getColor, getText, getSubtext } = ctx
-  const {
-    selectedPaddingRatio = 0.2,
-  } = userOptions
+export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
+  layoutNodes: NodeLayout<T>[] = []
 
-  let layoutNodes: NodeLayout<T>[] = []
-  const canvas = document.createElement('canvas')
-  const c = canvas.getContext('2d')!
-  let width = 0
-  let height = 0
-  let animationFrame: number | null = null
-  let hoveredNode: TreeNode<T> | null = null
-  let bgOriginX = 0
-  let bgOriginY = 0
-  let bgColor = ''
-  const normalFont = '14px sans-serif'
-  // const boldWidthCache: Record<number, number> = {}
-  // const boldFont = 'bold ' + normalFont
-  const normalWidthCache: Record<number, number> = {}
-  let ellipsisWidth = 0
-  let currentWidthCache: Record<number, number> = normalWidthCache
-  let currentNode: NodeLayout<T> | null = null
-  let currentLayout: NodeLayout<T> | null = null
-  let previousLayout: NodeLayout<T> | null = null
+  width = 0
+  height = 0
+  animationFrame: number | null = null
+  hoveredNode: TreeNode<T> | null = null
+  bgOriginX = 0
+  bgOriginY = 0
+  bgColor = ''
+  normalFont = '14px sans-serif'
+  normalWidthCache: Record<number, number> = {}
+  ellipsisWidth = 0
+  currentWidthCache: Record<number, number> = this.normalWidthCache
+  currentNode: NodeLayout<T> | null = null
+  currentLayout: NodeLayout<T> | null = null
+  previousLayout: NodeLayout<T> | null = null
 
-  let currentOriginX = 0
-  let currentOriginY = 0
-  let animationStart = 0
-  let animationBlend = 1
-  let animationSource: NodeLayout<T> | null = null
-  let animationTarget: NodeLayout<T> | null = null
+  currentOriginX = 0
+  currentOriginY = 0
+  animationStart = 0
+  animationBlend = 1
+  animationSource: NodeLayout<T> | null = null
+  animationTarget: NodeLayout<T> | null = null
 
-  const updateCurrentLayout = (): void => {
-    if (currentNode) {
-      const [ox1, oy1, ow, oh] = currentNode.box
+  updateCurrentLayout(): void {
+    const selectedPaddingRatio = this.options.selectedPaddingRatio ?? 0.2
+    if (this.currentNode) {
+      const [ox1, oy1, ow, oh] = this.currentNode.box
       const ox2 = ox1 + ow
       const oy2 = oy1 + oh
-      const nx1 = Math.round(width * selectedPaddingRatio / 2)
-      const ny1 = Math.round(height * selectedPaddingRatio / 2)
-      const nx2 = width - nx1 - 1
-      const ny2 = height - ny1 - 1
-      const t = animationTarget ? animationBlend : 1 - animationBlend
+      const nx1 = Math.round(this.width * selectedPaddingRatio / 2)
+      const ny1 = Math.round(this.height * selectedPaddingRatio / 2)
+      const nx2 = this.width - nx1 - 1
+      const ny2 = this.height - ny1 - 1
+      const t = this.animationTarget ? this.animationBlend : 1 - this.animationBlend
       const x1 = Math.round(ox1 + (nx1 - ox1) * t)
       const y1 = Math.round(oy1 + (ny1 - oy1) * t)
       const x2 = Math.round(ox2 + (nx2 - ox2) * t)
       const y2 = Math.round(oy2 + (ny2 - oy2) * t)
       const wrap64 = (x: number) => x - Math.floor(x / 64 - 0.5) * 64
-      currentLayout = layoutTreemap([currentNode.node], x1, y1, x2 - x1, y2 - y1)[0]
-      currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
-      currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
+      this.currentLayout = layoutTreemap([this.currentNode.node], x1, y1, x2 - x1, y2 - y1)[0]
+      this.currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
+      this.currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
     }
     else {
-      currentLayout = null
-      currentOriginX = 0
-      currentOriginY = 0
+      this.currentLayout = null
+      this.currentOriginX = 0
+      this.currentOriginY = 0
     }
   }
 
-  const resize = (): void => {
-    const oldWidth = width
-    const oldHeight = height
+  resize(): void {
+    const oldWidth = this.width
+    const oldHeight = this.height
     const ratio = window.devicePixelRatio || 1
-    width = Math.min(el.clientWidth, 1600)
-    height = Math.max(Math.round(width / 2), innerHeight - 200)
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-    canvas.width = Math.round(width * ratio)
-    canvas.height = Math.round(height * ratio)
-    c.scale(ratio, ratio)
-    if (width !== oldWidth || height !== oldHeight) {
-      layoutNodes = layoutTreemap([tree.root], 0, 0, width - 1, height - 1)
-      updateCurrentLayout()
+    this.width = Math.min(this.el.clientWidth, 1600)
+    this.height = Math.max(Math.round(this.width / 2), innerHeight - 200)
+    this.canvas.style.width = `${this.width}px`
+    this.canvas.style.height = `${this.height}px`
+    this.canvas.width = Math.round(this.width * ratio)
+    this.canvas.height = Math.round(this.height * ratio)
+    this.c.scale(ratio, ratio)
+    if (this.width !== oldWidth || this.height !== oldHeight) {
+      this.layoutNodes = layoutTreemap([this.tree.root], 0, 0, this.width - 1, this.height - 1)
+      this.updateCurrentLayout()
     }
-    draw()
+    this.draw()
   }
 
-  const tick = (): void => {
-    const oldAnimationBlend = animationBlend
-    const oldCurrentNode = currentNode
-    animationBlend = (now() - animationStart) / (options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
+  tick(): void {
+    const oldAnimationBlend = this.animationBlend
+    const oldCurrentNode = this.currentNode
+    this.animationBlend = (now() - this.animationStart) / (this.options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
 
-    if (animationBlend < 0 || animationBlend > 1) {
-      currentNode = animationTarget
-      previousLayout = null
-      animationBlend = 1
-      animationFrame = null
+    if (this.animationBlend < 0 || this.animationBlend > 1) {
+      this.currentNode = this.animationTarget
+      this.previousLayout = null
+      this.animationBlend = 1
+      this.animationFrame = null
     }
     else {
       // Use a cubic "ease-out" curve
-      animationBlend = 1 - animationBlend
-      animationBlend *= animationBlend * animationBlend
-      animationBlend = 1 - animationBlend
-      animationFrame = requestAnimationFrame(tick)
+      this.animationBlend = 1 - this.animationBlend
+      this.animationBlend *= this.animationBlend * this.animationBlend
+      this.animationBlend = 1 - this.animationBlend
+      this.animationFrame = requestAnimationFrame(() => this.tick())
     }
 
-    if (animationBlend !== oldAnimationBlend || currentNode !== oldCurrentNode) {
-      updateCurrentLayout()
+    if (this.animationBlend !== oldAnimationBlend || this.currentNode !== oldCurrentNode) {
+      this.updateCurrentLayout()
     }
-    draw()
+    this.draw()
   }
 
-  const invalidate = (): void => {
-    if (animationFrame === null)
-      animationFrame = requestAnimationFrame(tick)
+  invalidate(): void {
+    if (this.animationFrame === null)
+      this.animationFrame = requestAnimationFrame(() => this.tick())
   }
 
-  const charCodeWidth = (ch: number): number => {
-    let width = currentWidthCache[ch]
+  charCodeWidth(ch: number): number {
+    let width = this.currentWidthCache[ch]
     if (width === undefined) {
-      width = c.measureText(String.fromCharCode(ch)).width
-      currentWidthCache[ch] = width
+      width = this.c.measureText(String.fromCharCode(ch)).width
+      this.currentWidthCache[ch] = width
     }
     return width
   }
 
-  const textOverflowEllipsis = (text: string, width: number): [string, number] => {
-    if (width < ellipsisWidth)
+  textOverflowEllipsis(text: string, width: number): [string, number] {
+    if (width < this.ellipsisWidth)
       return ['', 0]
     let textWidth = 0
     const n = text.length
     let i = 0
     while (i < n) {
-      const charWidth = charCodeWidth(text.charCodeAt(i))
-      if (width < textWidth + ellipsisWidth + charWidth) {
-        return [`${text.slice(0, i)}...`, textWidth + ellipsisWidth]
+      const charWidth = this.charCodeWidth(text.charCodeAt(i))
+      if (width < textWidth + this.ellipsisWidth + charWidth) {
+        return [`${text.slice(0, i)}...`, textWidth + this.ellipsisWidth]
       }
       textWidth += charWidth
       i++
@@ -259,172 +251,172 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
     return [text, textWidth]
   }
 
-  const drawNodeBackground = (layout: NodeLayout<T>, culling: Culling): DrawFlags => {
+  drawNodeBackground(layout: NodeLayout<T>, culling: Culling): DrawFlags {
     const node = layout.node
     const [x, y, w, h] = layout.box
-    let flags = (node === hoveredNode ? DrawFlags.CONTAINS_HOVER : 0)
-      | (layout === animationTarget ? DrawFlags.CONTAINS_TARGET : 0)
+    let flags = (node === this.hoveredNode ? DrawFlags.CONTAINS_HOVER : 0)
+      | (layout === this.animationTarget ? DrawFlags.CONTAINS_TARGET : 0)
 
     // Improve performance by not drawing backgrounds unnecessarily
-    if (culling === Culling.Enabled && currentLayout) {
-      const [cx, cy, cw, ch] = currentLayout.box
+    if (culling === Culling.Enabled && this.currentLayout) {
+      const [cx, cy, cw, ch] = this.currentLayout.box
       if (x >= cx && y >= cy && x + w <= cx + cw && y + h <= cy + ch) {
         culling = Culling.Culled
       }
     }
 
     for (const child of layout.children) {
-      flags |= drawNodeBackground(child, culling)
+      flags |= this.drawNodeBackground(child, culling)
     }
 
     if (culling !== Culling.Culled) {
-      c.fillStyle = colorToCanvasFill(getColor(node) || palette.fallback, c, bgOriginX, bgOriginY, 1)
+      this.c.fillStyle = colorToCanvasFill(this.getColor(node) || this.palette.fallback, this.c, this.bgOriginX, this.bgOriginY, 1)
       if (layout.children.length) {
         // Avoiding overdraw is probably a good idea...
-        c.fillRect(x, y, w, CONSTANT_HEADER_HEIGHT)
-        c.fillRect(x, y + h - CONSTANT_PADDING, w, CONSTANT_PADDING)
-        c.fillRect(x, y + CONSTANT_HEADER_HEIGHT, CONSTANT_PADDING, h - CONSTANT_INSET_Y)
-        c.fillRect(x + w - CONSTANT_PADDING, y + CONSTANT_HEADER_HEIGHT, CONSTANT_PADDING, h - CONSTANT_INSET_Y)
+        this.c.fillRect(x, y, w, CONSTANT_HEADER_HEIGHT)
+        this.c.fillRect(x, y + h - CONSTANT_PADDING, w, CONSTANT_PADDING)
+        this.c.fillRect(x, y + CONSTANT_HEADER_HEIGHT, CONSTANT_PADDING, h - CONSTANT_INSET_Y)
+        this.c.fillRect(x + w - CONSTANT_PADDING, y + CONSTANT_HEADER_HEIGHT, CONSTANT_PADDING, h - CONSTANT_INSET_Y)
       }
       else {
         // Fill in the whole node if there are no children
-        c.fillRect(x, y, w, h)
+        this.c.fillRect(x, y, w, h)
       }
     }
 
     return flags
   }
 
-  const drawNodeForeground = (layout: NodeLayout<T>, inCurrentNode: boolean): void => {
+  drawNodeForeground(layout: NodeLayout<T>, inCurrentNode: boolean): void {
     const node = layout.node
     const [x, y, w, h] = layout.box
 
     // Draw the hover highlight
-    if (hoveredNode === node && (!currentNode || inCurrentNode)) {
-      c.fillStyle = palette.hover
-      c.fillRect(x, y, w, h)
+    if (this.hoveredNode === node && (!this.currentNode || inCurrentNode)) {
+      this.c.fillStyle = this.palette.hover
+      this.c.fillRect(x, y, w, h)
     }
 
-    strokeRectWithFirefoxBugWorkaround(c, palette.stroke, x + 0.5, y + 0.5, w, h)
+    strokeRectWithFirefoxBugWorkaround(this.c, this.palette.stroke, x + 0.5, y + 0.5, w, h)
 
     if (h >= CONSTANT_HEADER_HEIGHT) {
-      c.fillStyle = palette.text
+      this.c.fillStyle = this.palette.text
 
-      c.font = normalFont
-      currentWidthCache = normalWidthCache
-      ellipsisWidth = 3 * charCodeWidth(CONSTANT_DOT_CHAR_CODE)
+      this.c.font = this.normalFont
+      this.currentWidthCache = this.normalWidthCache
+      this.ellipsisWidth = 3 * this.charCodeWidth(CONSTANT_DOT_CHAR_CODE)
 
       // Measure the node name
       const maxWidth = w - CONSTANT_INSET_X
       const textY = y + Math.round(CONSTANT_INSET_Y / 2)
-      const [nameText, nameWidth] = textOverflowEllipsis(getText(node) || '', maxWidth)
+      const [nameText, nameWidth] = this.textOverflowEllipsis(this.getText(node) || '', maxWidth)
       let textX = x + Math.round((w - nameWidth) / 2)
 
-      const text = getText(node)
-      const subtext = getSubtext(node)
+      const text = this.getText(node)
+      const subtext = this.getSubtext(node)
       // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
       if (nameText === text && node.children.length) {
         let detailText = subtext || ''
         if (detailText && text)
           detailText = ` - ${detailText}`
-        const [sizeText, sizeWidth] = textOverflowEllipsis(detailText, maxWidth - nameWidth)
+        const [sizeText, sizeWidth] = this.textOverflowEllipsis(detailText, maxWidth - nameWidth)
         textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
-        c.globalAlpha = 0.5
-        c.fillText(sizeText, textX + nameWidth, textY)
-        c.globalAlpha = 1
+        this.c.globalAlpha = 0.5
+        this.c.fillText(sizeText, textX + nameWidth, textY)
+        this.c.globalAlpha = 1
       }
 
       // Draw the node name
-      c.fillText(nameText, textX, textY)
+      this.c.fillText(nameText, textX, textY)
 
       // Draw the node detail (only if there's enough space and only for leaf nodes)
       if (h > CONSTANT_INSET_Y + 16 && !node.children.length) {
-        const [sizeText, sizeWidth] = textOverflowEllipsis(subtext || '', maxWidth)
-        c.globalAlpha = 0.5
+        const [sizeText, sizeWidth] = this.textOverflowEllipsis(subtext || '', maxWidth)
+        this.c.globalAlpha = 0.5
         // Handle the case where title is empty
         const headerHeight = text ? CONSTANT_HEADER_HEIGHT : (CONSTANT_HEADER_HEIGHT / 2 + CONSTANT_PADDING)
-        c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + headerHeight + Math.round(h - CONSTANT_INSET_Y) / 2)
-        c.globalAlpha = 1
+        this.c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + headerHeight + Math.round(h - CONSTANT_INSET_Y) / 2)
+        this.c.globalAlpha = 1
       }
 
       // Draw the children
       for (const child of layout.children) {
-        drawNodeForeground(child, inCurrentNode)
+        this.drawNodeForeground(child, inCurrentNode)
       }
     }
   }
 
-  function draw(): void {
-    bgColor = palette.bg
-    animationFrame = null
+  draw(): void {
+    this.bgColor = this.palette.bg
+    this.animationFrame = null
 
-    c.clearRect(0, 0, width, height)
-    c.textBaseline = 'middle'
-    ellipsisWidth = c.measureText('...').width
+    this.c.clearRect(0, 0, this.width, this.height)
+    this.c.textBaseline = 'middle'
+    this.ellipsisWidth = this.c.measureText('...').width
 
     // Draw the full tree first
     let _nodeContainingHover: NodeLayout<T> | null = null
     let nodeContainingTarget: NodeLayout<T> | null = null
-    const transition = !currentLayout
+    const transition = !this.currentLayout
       ? 0
-      : !animationSource
-          ? animationBlend
-          : !animationTarget ? 1 - animationBlend : 1
-    bgOriginX = bgOriginY = 0
-    for (const node of layoutNodes) {
-      const flags = drawNodeBackground(node, Culling.Enabled)
+      : !this.animationSource
+          ? this.animationBlend
+          : !this.animationTarget ? 1 - this.animationBlend : 1
+    this.bgOriginX = this.bgOriginY = 0
+    for (const node of this.layoutNodes) {
+      const flags = this.drawNodeBackground(node, Culling.Enabled)
       if (flags & DrawFlags.CONTAINS_HOVER)
         _nodeContainingHover = node
       if (flags & DrawFlags.CONTAINS_TARGET)
         nodeContainingTarget = node
     }
-    for (const node of layoutNodes) {
-      drawNodeForeground(node, false)
+    for (const node of this.layoutNodes) {
+      this.drawNodeForeground(node, false)
 
       // Fade out nodes that are not activated
-      if (currentLayout) {
+      if (this.currentLayout) {
         const [x, y, w, h] = node.box
-        c.globalAlpha = 0.6 * (!currentLayout || (!animationSource && nodeContainingTarget && node !== nodeContainingTarget)
+        this.c.globalAlpha = 0.6 * (!this.currentLayout || (!this.animationSource && nodeContainingTarget && node !== nodeContainingTarget)
           ? 1
           : transition)
-        c.fillStyle = bgColor
-        c.fillRect(x, y, w, h)
-        c.globalAlpha = 1
+        this.c.fillStyle = this.bgColor
+        this.c.fillRect(x, y, w, h)
+        this.c.globalAlpha = 1
       }
     }
 
     // Draw the previous node
-    if (previousLayout) {
-      drawNodeBackground(previousLayout, Culling.Disabled)
-      drawNodeForeground(previousLayout, true)
+    if (this.previousLayout) {
+      this.drawNodeBackground(this.previousLayout, Culling.Disabled)
+      this.drawNodeForeground(this.previousLayout, true)
     }
 
     // Draw the current node on top
-    if (currentLayout) {
-      const [x, y, w, h] = currentLayout.box
-      const matrix = c.getTransform()
+    if (this.currentLayout) {
+      const [x, y, w, h] = this.currentLayout.box
+      const matrix = this.c.getTransform()
       const scale = Math.sqrt(matrix.a * matrix.d)
 
       // Draw a shadow under the node
-      c.save()
-      c.shadowColor = palette.shadow
-      c.shadowBlur = scale * (30 * transition)
-      c.shadowOffsetX = scale * (2 * width)
-      c.shadowOffsetY = scale * (2 * height + 15 * transition)
-      c.fillRect(x - 2 * width, y - 2 * height, w, h)
-      c.restore()
+      this.c.save()
+      this.c.shadowColor = this.palette.shadow
+      this.c.shadowBlur = scale * (30 * transition)
+      this.c.shadowOffsetX = scale * (2 * this.width)
+      this.c.shadowOffsetY = scale * (2 * this.height + 15 * transition)
+      this.c.fillRect(x - 2 * this.width, y - 2 * this.height, w, h)
+      this.c.restore()
 
-      bgOriginX = currentOriginX
-      bgOriginY = currentOriginY
-      drawNodeBackground(currentLayout, Culling.Disabled)
-      drawNodeForeground(currentLayout, true)
+      this.bgOriginX = this.currentOriginX
+      this.bgOriginY = this.currentOriginY
+      this.drawNodeBackground(this.currentLayout, Culling.Disabled)
+      this.drawNodeForeground(this.currentLayout, true)
     }
   }
 
-  const hitTestNode = (mouseEvent: MouseEvent | WheelEvent): NodeLayout<T> | null => {
+  hitTestNode(mouseEvent: MouseEvent | WheelEvent): NodeLayout<T> | null {
     let mouseX = mouseEvent.pageX
     let mouseY = mouseEvent.pageY
-    for (let el: HTMLElement | null = canvas; el; el = el.offsetParent as HTMLElement | null) {
+    for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
       mouseX -= el.offsetLeft
       mouseY -= el.offsetTop
     }
@@ -439,95 +431,101 @@ export function createTreemap<T>(tree: Tree<T>, userOptions: TreemapOptions<T> =
       return null
     }
 
-    return currentLayout ? visit([currentLayout], false) : visit(layoutNodes, true)
+    return this.currentLayout
+      ? visit([this.currentLayout], false)
+      : visit(this.layoutNodes, true)
   }
 
-  const updateHover = (e: MouseEvent): void => {
-    const layout = hitTestNode(e)
-    changeHoveredNode(layout && layout.node)
+  updateHover(e: MouseEvent): void {
+    const layout = this.hitTestNode(e)
+    this.changeHoveredNode(layout && layout.node)
 
     // Show a tooltip for hovered nodes
-    events.emit('hover', layout?.node || null, e)
+    this.events.emit('hover', layout?.node || null, e)
   }
 
-  function changeHoveredNode(node: TreeNode<T> | null): void {
-    if (hoveredNode !== node) {
-      hoveredNode = node
-      canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
-      invalidate()
+  changeHoveredNode(node: TreeNode<T> | null): void {
+    if (this.hoveredNode !== node) {
+      this.hoveredNode = node
+      this.canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
+      this.invalidate()
     }
   }
 
-  function searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
+  searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
     for (const child of children) {
-      const result = child.node === node ? child : searchFor(child.children, node)
+      const result = child.node === node ? child : this.searchFor(child.children, node)
       if (result)
         return result
     }
     return null
   }
 
-  function changeCurrentNode(node: NodeLayout<T> | null, animate: boolean = options.animate ?? true): void {
-    if (currentNode !== node) {
-      events.emit('select', node?.node || null)
-      previousLayout = node ? currentLayout : null
+  changeCurrentNode(node: NodeLayout<T> | null, animate = this.options.animate): void {
+    if (this.currentNode !== node) {
+      this.events.emit('select', node?.node || null)
+      this.previousLayout = node ? this.currentLayout : null
       if (animate) {
-        animationBlend = 0
-        animationStart = now()
-        animationSource = currentNode
+        this.animationBlend = 0
+        this.animationStart = now()
+        this.animationSource = this.currentNode
       }
-      animationTarget = node
-      currentNode = node || searchFor(layoutNodes, currentNode!.node)
-      updateCurrentLayout()
-      invalidate()
+      this.animationTarget = node
+      this.currentNode = node || this.searchFor(this.layoutNodes, this.currentNode!.node)
+      this.updateCurrentLayout()
+      this.invalidate()
     }
   }
 
-  canvas.addEventListener('mousemove', (e) => {
-    updateHover(e)
-  })
+  constructor(tree: Tree<T>, options: TreemapOptions<T> = {}) {
+    super(tree, options)
 
-  canvas.addEventListener('mouseout', (e) => {
-    changeHoveredNode(null)
-    events.emit('hover', null, e)
-  })
+    this.canvas.addEventListener('mousemove', (e) => {
+      this.updateHover(e)
+    })
 
-  el.addEventListener('click', (e) => {
-    const layout = hitTestNode(e)
-    if (layout) {
-      const node = layout.node
-      events.emit('click', node, e)
-      if (!node.children.length) {
-        updateHover(e)
+    this.canvas.addEventListener('mouseout', (e) => {
+      this.changeHoveredNode(null)
+      this.events.emit('hover', null, e)
+    })
+
+    this.el.addEventListener('click', (e) => {
+      const layout = this.hitTestNode(e)
+      if (layout) {
+        const node = layout.node
+        this.events.emit('click', node, e)
+        if (!node.children.length) {
+          this.updateHover(e)
+        }
+        else if (layout !== this.currentLayout) {
+          this.changeCurrentNode(layout)
+          this.changeHoveredNode(null)
+        }
+        else {
+          this.updateHover(e)
+        }
       }
-      else if (layout !== currentLayout) {
-        changeCurrentNode(layout)
-        changeHoveredNode(null)
+      else if (this.currentNode) {
+        this.changeCurrentNode(null)
+        this.updateHover(e)
       }
-      else {
-        updateHover(e)
-      }
-    }
-    else if (currentNode) {
-      changeCurrentNode(null)
-      updateHover(e)
-    }
-  })
+    })
 
-  resize()
-  Promise.resolve().then(resize) // Resize once the element is in the DOM
+    this.el.append(this.canvas)
 
-  disposables.push(useWheelEventListener(updateHover))
-  disposables.push(useResizeEventListener(resize))
+    this.resize()
+    Promise.resolve().then(() => this.resize()) // Resize once the element is in the DOM
 
-  el.append(canvas)
+    this.disposables.push(useWheelEventListener(e => this.updateHover(e)))
+    this.disposables.push(useResizeEventListener(() => this.resize()))
+  }
 
-  return {
-    ...ctx,
-    resize,
-    draw,
-    select: (node: TreeNode<T> | null, animate?: boolean) => {
-      changeCurrentNode(node ? searchFor(layoutNodes, node) : null, animate)
-    },
-  } satisfies GraphBase<T>
+  select(node: TreeNode<T> | null, animate?: boolean) {
+    this.changeCurrentNode(
+      node
+        ? this.searchFor(this.layoutNodes, node)
+        : null,
+      animate,
+    )
+  }
 }
