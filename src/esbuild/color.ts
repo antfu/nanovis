@@ -1,5 +1,5 @@
 import type { ColorMapPlain, ColorValue } from '../types/color'
-import type { TreeNode, TreeRoot } from '../types/tree'
+import type { TreeNode } from '../types/tree'
 import type { Metafile } from './metafile'
 import { createColorGetterFromMap, hueAngleToColor } from '../utils/color'
 
@@ -36,9 +36,9 @@ export function moduleTypeLabelInputPath(
   return `${prefix}ESM & CJS`
 }
 
-export function createColorGetterFormats<T>(tree: TreeRoot<T>, metafile: Metafile): (node: TreeNode<T>) => ColorValue | undefined {
+export function createColorGetterFormats<T>(tree: TreeNode<T>, metafile: Metafile): (node: TreeNode<T>) => ColorValue | undefined {
   const colorMapping: ColorMapPlain = {}
-  assignColorsByFormat(colorMapping, tree.root, metafile)
+  assignColorsByFormat(colorMapping, tree, metafile)
   // TODO: make it on-demand
   return createColorGetterFromMap(colorMapping)
 }
