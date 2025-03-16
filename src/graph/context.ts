@@ -5,7 +5,8 @@ import { createColorGetterSpectrum } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS, DEFAULT_PALETTE } from '../utils/defaults'
 
 const CONSTANT_DOT_CHAR_CODE = 46
-const CONSTANT_NORMAL_FONT = '14px sans-serif'
+export const CONSTANT_NORMAL_FONT = '14px sans-serif'
+export const CONSTANT_BOLD_FONT = `bold ${CONSTANT_NORMAL_FONT}`
 
 export class GraphContext<T, Options extends GraphBaseOptions<T>> {
   public readonly el: HTMLElement

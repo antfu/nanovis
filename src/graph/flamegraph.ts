@@ -1,29 +1,28 @@
 import type { GraphBaseOptions, Tree, TreeNode } from '../types/tree'
 import { colorToCanvasFill } from '../utils/color'
+import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
   now,
   strokeRectWithFirefoxBugWorkaround,
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { GraphContext } from './context'
+import { CONSTANT_BOLD_FONT, CONSTANT_NORMAL_FONT, GraphContext } from './context'
 
 // const CONSTANT_MARGIN = 50
 const CONSTANT_ROW_HEIGHT = 24
 const CONSTANT_TEXT_INDENT = 5
+const CONSTANT_FOCUS_PADDING_RATIO = 0.01
 const CONSTANT_ZOOMED_OUT_WIDTH = 1000
 
 // eslint-disable-next-line no-restricted-syntax
 const enum FLAGS {
-  OUTPUT = 1,
+  ROOT = 1,
   HOVER = 2,
 }
 
 export interface CreateFlamegraphOptions<T> extends GraphBaseOptions<T> {
 }
-
-const CONSTANT_NORMAL_FONT = '14px sans-serif'
-const CONSTANT_BOLD_FONT = `bold ${CONSTANT_NORMAL_FONT}`
 
 export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   private mainEl = document.createElement('div')
@@ -38,13 +37,21 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   private prevWheelWasZoom = false
   private stripeScaleAdjust = 1
   private hoveredNode: TreeNode<T> | null = null
+  private selectedNode: TreeNode<T> | null = null
+  private nodeStartBytes: Map<string, number> = new Map()
+
+  private animationFromMin = 0
+  private animationFromMax = 0
+  private animationToMin = 0
+  private animationToMax = 0
+  private animationStart = 0
 
   constructor(tree: Tree<T>, userOptions: CreateFlamegraphOptions<T> = {}) {
     super(tree, userOptions)
 
     this.totalBytes = tree.root.size
-    this.viewportMin = 0
-    this.viewportMax = this.totalBytes
+    this.viewportMin = this.animationFromMin = this.animationToMin = 0
+    this.viewportMax = this.animationFromMax = this.animationToMax = this.totalBytes
 
     Object.assign(this.mainEl.style, {
       position: 'relative',
@@ -92,16 +99,15 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
 
     this.canvas.onclick = (e) => {
-    // Don't trigger on mouse up after a drag
+      // Don't trigger on mouse up after a drag
       if (didDrag)
         return
 
       const node = this.hitTestNode(e)
       this.changeHoveredNode(node)
-
-      if (node && !node.children.length) {
+      this.changeSelectedNode(node)
+      if (node)
         this.events.emit('click', node, e)
-      }
     }
 
     this.disposables.push(useWheelEventListener((e) => {
@@ -136,24 +142,55 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   }
 
   public override tick(): void {
+    let t = (now() - this.animationStart) / (this.options.animateDuration ?? DEFAULT_GRAPH_OPTIONS.animateDuration)
+
+    if (t < 0 || t > 1) {
+      t = 1
+      this.viewportMin = this.animationToMin
+      this.viewportMax = this.animationToMax
+    }
+    else {
+      // Use a cubic "ease-in-out" curve
+      if (t < 0.5) {
+        t *= 4 * t * t
+      }
+      else {
+        t = 1 - t
+        t *= 4 * t * t
+        t = 1 - t
+      }
+      this.viewportMin = this.animationFromMin + (this.animationToMin - this.animationFromMin) * t
+      this.viewportMax = this.animationFromMax + (this.animationToMax - this.animationFromMax) * t
+      this.invalidate()
+    }
+
     this.draw()
   }
 
   public override draw(): void {
-    let startBytes = 0
-    let rightEdge = -Infinity
-
     this.c.clearRect(0, 0, this.width, this.height)
     this.c.textBaseline = 'middle'
 
-    for (const child of this.tree.root.children) {
-      rightEdge = this.drawNode(child, 0, startBytes, rightEdge, FLAGS.OUTPUT)
-      startBytes += child.size
+    this.drawNode(this.tree.root, 0, 0, -Infinity, FLAGS.ROOT)
+  }
+
+  private changeSelectedNode(node: TreeNode<T> | null, animate = this.options.animate ?? DEFAULT_GRAPH_OPTIONS.animate): void {
+    if (this.selectedNode === node)
+      return
+    this.selectedNode = node
+    this.events.emit('select', node)
+    if (node && this.nodeStartBytes.has(node.id)) {
+      let start = this.nodeStartBytes.get(node.id)!
+      let end = start + node.size
+      start = Math.max(0, start - node.size * CONSTANT_FOCUS_PADDING_RATIO)
+      end = Math.min(this.totalBytes, end + node.size * CONSTANT_FOCUS_PADDING_RATIO)
+      this.setViewport(start, end, animate)
     }
   }
 
-  public select(node: TreeNode<T> | null): void {
+  public select(node: TreeNode<T> | null, animate = this.options.animate ?? DEFAULT_GRAPH_OPTIONS.animate): void {
     this.changeHoveredNode(node)
+    this.changeSelectedNode(node, animate)
   }
 
   public override resize(): void {
@@ -176,6 +213,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   // minimum rectangle width of 2px and we also skip drawing rectangles that
   // have a right edge less than 1.5px from the previous right edge.
   private drawNode(node: TreeNode<T>, y: number, startBytes: number, prevRightEdge: number, flags: FLAGS): number {
+    this.nodeStartBytes.set(node.id, startBytes)
     const scale = this.zoomedOutWidth / (this.viewportMax - this.viewportMin)
     const x = this.zoomedOutMin + (startBytes - this.viewportMin) * scale
     const w = node.size * scale
@@ -197,7 +235,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     let textColor = this.palette.text
     let childRightEdge = -Infinity
 
-    if (flags & FLAGS.OUTPUT) {
+    if (flags & FLAGS.ROOT) {
       textColor = this.palette.fg
       this.setFont(CONSTANT_BOLD_FONT)
     }
@@ -229,7 +267,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
 
     // Switch to the size font
-    if (flags & FLAGS.OUTPUT) {
+    if (flags & FLAGS.ROOT) {
       this.setFont(CONSTANT_NORMAL_FONT)
     }
 
@@ -249,12 +287,12 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
 
     // Draw the children
     for (const child of node.children) {
-      childRightEdge = this.drawNode(child, y + CONSTANT_ROW_HEIGHT, startBytes, childRightEdge, flags & ~FLAGS.OUTPUT)
+      childRightEdge = this.drawNode(child, y + CONSTANT_ROW_HEIGHT, startBytes, childRightEdge, flags & ~FLAGS.ROOT)
       startBytes += child.size
     }
 
     // Draw the outline
-    if (!(flags & FLAGS.OUTPUT)) {
+    if (!(flags & FLAGS.ROOT)) {
       // Note: The stroke deliberately overlaps the right and bottom edges
       strokeRectWithFirefoxBugWorkaround(this.c, this.palette.stroke, x + 0.5, y + 0.5, rectWidth, CONSTANT_ROW_HEIGHT)
     }
@@ -265,7 +303,6 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
   private changeHoveredNode(node: TreeNode<T> | null): void {
     if (this.hoveredNode !== node) {
       this.hoveredNode = node
-      this.events.emit('select', node)
       this.canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
       this.invalidate()
     }
@@ -280,7 +317,6 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
 
     const mouseBytes = this.viewportMin + (this.viewportMax - this.viewportMin) / this.zoomedOutWidth * (mouseX - this.zoomedOutMin)
-    let startBytes = 0
 
     const visit = (node: TreeNode<T>, y: number, startBytes: number): TreeNode<T> | null => {
       if (mouseBytes >= startBytes && mouseBytes < startBytes + node.size) {
@@ -300,14 +336,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
       return null
     }
 
-    for (const child of this.tree.root.children) {
-      const result = visit(child, 0, startBytes)
-      if (result)
-        return result
-      startBytes += child.size
-    }
-
-    return null
+    return visit(this.tree.root, 0, 0)
   }
 
   private modifyViewport(deltaX: number, deltaY: number, xForZoom: number | null): void {
@@ -337,11 +366,21 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     if (max > this.totalBytes)
       max = this.totalBytes
 
-    if (this.viewportMin !== min || this.viewportMax !== max) {
-      this.viewportMin = min
-      this.viewportMax = max
-      this.invalidate()
-    }
+    this.setViewport(min, max, false)
+  }
+
+  private setViewport(min: number, max: number, animate: boolean): void {
+    this.animationFromMin = this.viewportMin
+    this.animationFromMax = this.viewportMax
+    this.animationToMin = min
+    this.animationToMax = max
+
+    if (animate)
+      this.animationStart = now()
+    else
+      this.animationStart = 0
+
+    this.invalidate()
   }
 
   private updateHover(e: MouseEvent | WheelEvent): void {

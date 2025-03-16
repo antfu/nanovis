@@ -7,7 +7,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { GraphContext } from './context'
+import { CONSTANT_BOLD_FONT, GraphContext } from './context'
 
 // eslint-disable-next-line no-restricted-syntax
 const enum FLAGS {
@@ -172,7 +172,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     // Draw the size of the current node in the middle
     if (this.animatedDepth === 0) {
       this.c.fillStyle = this.palette.stroke
-      this.setFont('bold 16px sans-serif')
+      this.setFont(CONSTANT_BOLD_FONT)
       this.c.textAlign = 'center'
       this.c.textBaseline = 'middle'
       this.c.fillText(bytesToText(this.targetNode.size), this.centerX, this.centerY)
