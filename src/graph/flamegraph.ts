@@ -225,8 +225,8 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
     const rectWidth = w < 2 ? 2 : w
     const textX = (x > 0 ? x : 0) + CONSTANT_TEXT_INDENT
     const textY = y + CONSTANT_ROW_HEIGHT / 2
-    let nameText = ''
-    let sizeText = ''
+    let text = this.getText(node) || ''
+    let subText = this.getSubtext(node) || ''
     let measuredW: number
     let typesetX = 0
     const typesetW = w + x - textX
@@ -252,17 +252,16 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
 
     // Typeset the node name
     if (this.ellipsisWidth < typesetW) {
-      nameText = this.getText(node) || ''
-      measuredW = this.c.measureText(nameText).width
+      measuredW = this.c.measureText(text).width
       if (measuredW <= typesetW) {
         typesetX += measuredW
       }
       else {
-        nameText = this.textOverflowEllipsis(nameText, typesetW)[0]
+        text = this.textOverflowEllipsis(text, typesetW)[0]
         typesetX = typesetW
       }
       this.c.fillStyle = textColor
-      this.c.fillText(nameText, textX, textY)
+      this.c.fillText(text, textX, textY)
     }
 
     // Switch to the size font
@@ -272,15 +271,14 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
 
     // Typeset the node size
     if (typesetX + this.ellipsisWidth < typesetW) {
-      sizeText = this.getSubtext(node) || ''
-      if (sizeText)
-        sizeText = ` - ${sizeText}`
-      measuredW = this.c.measureText(sizeText).width
+      if (subText && text)
+        subText = ` - ${subText}`
+      measuredW = this.c.measureText(subText).width
       if (typesetX + measuredW > typesetW) {
-        sizeText = this.textOverflowEllipsis(sizeText, typesetW - typesetX)[0]
+        subText = this.textOverflowEllipsis(subText, typesetW - typesetX)[0]
       }
       this.c.globalAlpha = 0.5
-      this.c.fillText(sizeText, textX + typesetX, textY)
+      this.c.fillText(subText, textX + typesetX, textY)
       this.c.globalAlpha = 1
     }
 
