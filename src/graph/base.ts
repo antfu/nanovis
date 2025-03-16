@@ -1,14 +1,15 @@
 import type { Emitter } from 'nanoevents'
-import type { ColorValue, Events, GraphBaseOptions, Palette, Tree, TreeNode } from '../types'
+import type { ColorValue, Events, GraphBaseOptions, Palette, TreeNode } from '../types'
 import { createNanoEvents } from 'nanoevents'
 import { createColorGetterSpectrum } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS, DEFAULT_PALETTE } from '../utils/defaults'
+import { getTreeMaxDepth } from '../utils/tree'
 
 const CONSTANT_DOT_CHAR_CODE = 46
 export const CONSTANT_NORMAL_FONT = '14px sans-serif'
 export const CONSTANT_BOLD_FONT = `bold ${CONSTANT_NORMAL_FONT}`
 
-export class GraphBase<T, Options extends GraphBaseOptions<T>> {
+export class GraphBase<T = undefined, Options extends GraphBaseOptions<T> = GraphBaseOptions<T>> {
   public readonly el: HTMLElement
 
   public readonly canvas: HTMLCanvasElement
@@ -16,7 +17,8 @@ export class GraphBase<T, Options extends GraphBaseOptions<T>> {
   public width = 0
   public height = 0
 
-  public tree: Tree<T>
+  public readonly root: TreeNode<T>
+  public readonly maxDepth: number
   public readonly events: Emitter<Events<T>>
 
   public options: Options
@@ -29,7 +31,7 @@ export class GraphBase<T, Options extends GraphBaseOptions<T>> {
 
   private _animationFrame: number | null = null
 
-  constructor(tree: Tree<T>, options: Options) {
+  constructor(tree: TreeNode<T>, options: Options) {
     this.options = {
       ...DEFAULT_GRAPH_OPTIONS,
       ...options,
@@ -49,7 +51,8 @@ export class GraphBase<T, Options extends GraphBaseOptions<T>> {
     this.el = document.createElement('div')
     this.canvas = document.createElement('canvas')
     this.c = this.canvas.getContext('2d')!
-    this.tree = tree
+    this.root = tree
+    this.maxDepth = getTreeMaxDepth(tree)
     this.disposables = []
     this.events = createNanoEvents<Events<T>>()
     this.getColor = getColor

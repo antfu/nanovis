@@ -1,4 +1,4 @@
-import type { GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import type { GraphBaseOptions, TreeNode } from '../types/tree'
 import { colorToCanvasFill } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
@@ -87,16 +87,13 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   private previousHoveredNode: TreeNode<T> | undefined
   private historyStack: TreeNode<T>[] = []
 
-  constructor(tree: Tree<T>, options: CreateSunburstOptions<T> = {}) {
-    while (tree.root.children.length === 1) {
-      tree = {
-        root: tree.root.children[0],
-        maxDepth: tree.maxDepth - 1,
-      }
+  constructor(tree: TreeNode<T>, options: CreateSunburstOptions<T> = {}) {
+    while (tree.children.length === 1) {
+      tree = tree.children[0]
     }
     super(tree, options)
 
-    this.currentNode = tree.root
+    this.currentNode = tree
     this.targetNode = this.currentNode
     this.animatedNode = this.currentNode
 
@@ -145,7 +142,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   }
 
   public override select(node: TreeNode<T> | null, animate?: boolean): void {
-    node = node || this.tree.root
+    node = node || this.root
     if (this.currentNode !== node) {
       this.currentNode = node
       this.updateSunburst(animate)
@@ -154,7 +151,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   }
 
   public override resize(): void {
-    const maxRadius = 2 * Math.ceil(computeRadius(this.tree.maxDepth))
+    const maxRadius = 2 * Math.ceil(computeRadius(this.maxDepth))
     this.width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
     this.height = this.width
     this.centerX = this.width >> 1

@@ -1,4 +1,4 @@
-import type { GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import type { GraphBaseOptions, TreeNode } from '../types/tree'
 import { colorToCanvasFill } from '../utils/color'
 import { DEFAULT_GRAPH_OPTIONS } from '../utils/defaults'
 import {
@@ -24,7 +24,7 @@ const enum FLAGS {
 export interface CreateFlamegraphOptions<T> extends GraphBaseOptions<T> {
 }
 
-export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
+export class Flamegraph<T = undefined> extends GraphBase<T, CreateFlamegraphOptions<T>> {
   private mainEl = document.createElement('div')
 
   private totalBytes: number
@@ -46,10 +46,10 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
   private animationToMax = 0
   private animationStart = 0
 
-  constructor(tree: Tree<T>, userOptions: CreateFlamegraphOptions<T> = {}) {
-    super(tree, userOptions)
+  constructor(root: TreeNode<T>, userOptions: CreateFlamegraphOptions<T> = {}) {
+    super(root, userOptions)
 
-    this.totalBytes = tree.root.size
+    this.totalBytes = root.size
     this.viewportMin = this.animationFromMin = this.animationToMin = 0
     this.viewportMax = this.animationFromMax = this.animationToMax = this.totalBytes
 
@@ -171,7 +171,7 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
     this.c.clearRect(0, 0, this.width, this.height)
     this.c.textBaseline = 'middle'
 
-    this.drawNode(this.tree.root, 0, 0, -Infinity, FLAGS.ROOT)
+    this.drawNode(this.root, 0, 0, -Infinity, FLAGS.ROOT)
   }
 
   private changeSelectedNode(node: TreeNode<T> | null, animate = this.options.animate ?? DEFAULT_GRAPH_OPTIONS.animate): void {
@@ -194,7 +194,7 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
 
   public override resize(): void {
     this.width = this.el.clientWidth
-    this.height = this.tree.maxDepth * CONSTANT_ROW_HEIGHT + 1
+    this.height = this.maxDepth * CONSTANT_ROW_HEIGHT + 1
     this.zoomedOutMin = (this.width - CONSTANT_ZOOMED_OUT_WIDTH) >> 1
     this.zoomedOutWidth = this.zoomedOutMin + CONSTANT_ZOOMED_OUT_WIDTH
     if (this.zoomedOutMin < 0)
@@ -333,7 +333,7 @@ export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
       return null
     }
 
-    return visit(this.tree.root, 0, 0)
+    return visit(this.root, 0, 0)
   }
 
   private modifyViewport(deltaX: number, deltaY: number, xForZoom: number | null): void {

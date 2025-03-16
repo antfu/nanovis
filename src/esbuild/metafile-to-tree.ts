@@ -1,38 +1,29 @@
-import type { Tree, TreeNode } from '../types/tree'
+import type { TreeNode, TreeNodeInput } from '../types/tree'
 import type { Metafile } from './metafile'
 import { bytesToText } from '../utils/helpers'
+import { normalizeTreeNode } from '../utils/tree'
 import { commonPrefixFinder, isSourceMapPath, splitPathBySlash, stripDisabledPathPrefix } from './helpers'
 
-export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
+export function esbuildMetafileToTree<T>(metafile: Metafile): TreeNode<T> {
   const outputs = metafile.outputs
-  const nodes: TreeNode<T>[] = []
+  const nodes: TreeNodeInput<T>[] = []
   let commonPrefix: string[] | undefined
   const root: TreeNodeInProgress = { text: '<Root>', id: '<root>', size: 0, childrenMap: {} }
 
-  const sortChildren = (node: TreeNodeInProgress): TreeNode<T> => {
+  const sortChildren = (node: TreeNodeInProgress): TreeNodeInput<T> => {
     const children = node.childrenMap
-    const sorted: TreeNode<T>[] = []
+    const sorted: TreeNodeInput<T>[] = []
     for (const file in children) {
       sorted.push(sortChildren(children[file]))
     }
-    return {
+    return <TreeNodeInput<T>>{
       text: node.text,
       id: node.id,
       subtext: bytesToText(node.size),
+      // sizeSelf: node.size,
       size: node.size,
-      children: sorted.sort(orderChildrenBySize),
+      children: sorted,
     }
-  }
-
-  const setParents = (node: TreeNode<T>, depth: number): number => {
-    let maxDepth = 0
-    for (const child of node.children) {
-      const childDepth = setParents(child, depth + 1)
-      child.parent = node
-      if (childDepth > maxDepth)
-        maxDepth = childDepth
-    }
-    return maxDepth + 1
   }
 
   // Include the inputs with size 0 so we can see when something has been tree-shaken
@@ -70,7 +61,7 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
   stop: while (true) {
     let prefix: string | undefined
     for (const node of nodes) {
-      const children = node.children
+      const children = node.children || []
       if (!children.length)
         continue
       if (children.length > 1 || children[0].children.length !== 1)
@@ -86,7 +77,7 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
 
     // Remove one level
     for (const node of nodes) {
-      let children = node.children
+      let children = node.children || []
       if (children.length) {
         children = children[0].children
         for (const child of children)
@@ -99,28 +90,20 @@ export function esbuildMetafileToTree<T>(metafile: Metafile): Tree<T> {
   // Add entries for the remaining space in each chunk
   for (const node of nodes) {
     let childBytes = 0
-    for (const child of node.children) {
+    for (const child of node.children || []) {
       childBytes += child.size
     }
-    if (childBytes < node.size) {
-      node.children.push({
+    if (childBytes < node.size!) {
+      node.children!.push({
         text: '(unassigned)',
         id: '',
-        subtext: bytesToText(node.size - childBytes),
-        size: node.size - childBytes,
+        subtext: bytesToText(node.size! - childBytes),
+        size: node.size! - childBytes,
         children: [],
-        parent: node,
       })
     }
   }
-
-  nodes.sort(orderChildrenBySize)
-
-  const finalRoot = sortChildren(root)
-  return {
-    root: finalRoot,
-    maxDepth: setParents(finalRoot, 0),
-  }
+  return normalizeTreeNode(sortChildren(root))
 }
 
 export interface TreeNodeInProgress {
@@ -128,13 +111,6 @@ export interface TreeNodeInProgress {
   id: string
   size: number
   childrenMap: Record<string, TreeNodeInProgress>
-}
-
-export function orderChildrenBySize(
-  a: { size: number, id: string },
-  b: { size: number, id: string },
-): number {
-  return b.size - a.size || +(a.id > b.id) - +(a.id < b.id)
 }
 
 export function accumulatePath(root: TreeNodeInProgress, path: string, bytesInOutput: number): number {

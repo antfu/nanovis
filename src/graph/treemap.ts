@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import type { GraphBaseOptions, Tree, TreeNode } from '../types/tree'
+import type { GraphBaseOptions, TreeNode } from '../types/tree'
 import {
   colorToCanvasFill,
 } from '../utils/color'
@@ -141,7 +141,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   private animationSource: NodeLayout<T> | null = null
   private animationTarget: NodeLayout<T> | null = null
 
-  constructor(tree: Tree<T>, options: TreemapOptions<T> = {}) {
+  constructor(tree: TreeNode<T>, options: TreemapOptions<T> = {}) {
     super(tree, options)
 
     this.canvas.addEventListener('mousemove', (e) => {
@@ -286,7 +286,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     this.width = Math.min(this.el.clientWidth, 1600)
     this.height = Math.max(Math.round(this.width / 2), innerHeight - 200)
     if (this.width !== oldWidth || this.height !== oldHeight) {
-      this.layoutNodes = layoutTreemap([this.tree.root], 0, 0, this.width - 1, this.height - 1)
+      this.layoutNodes = layoutTreemap([this.root], 0, 0, this.width - 1, this.height - 1)
       this.updateCurrentLayout()
     }
     super.resize()

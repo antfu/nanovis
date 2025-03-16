@@ -1,5 +1,5 @@
+import type { TreeNode } from '../types'
 import type { ColorMapPlain, ColorValue } from '../types/color'
-import type { Tree, TreeNode } from '../types/tree'
 
 export function hueAngleToColor(hueAngle: number, saturationMultiplier = 1, lightnessMultiplier = 1): string {
   const saturation = (0.6 + 0.4 * Math.max(0, Math.cos(hueAngle))) * saturationMultiplier
@@ -118,12 +118,12 @@ export function createColorGetterFromMap<T>(plain: ColorMapPlain): (node: TreeNo
 }
 
 export function createColorGetterSpectrum<T>(
-  tree: Tree<T>,
+  tree: TreeNode<T>,
   saturationMultiplier = 1,
   lightnessMultiplier = 1,
 ): (node: TreeNode<T>) => ColorValue | undefined {
   const colorMapping: ColorMapPlain = {}
-  assignColorsByDirectory(colorMapping, tree.root, 0, Math.PI * 2, saturationMultiplier, lightnessMultiplier)
+  assignColorsByDirectory(colorMapping, tree, 0, Math.PI * 2, saturationMultiplier, lightnessMultiplier)
   return createColorGetterFromMap(colorMapping)
 }
 

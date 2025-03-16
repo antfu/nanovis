@@ -10,6 +10,78 @@ Tiny visualization library for rendering tree structure in Treemap, Sunburst, Fl
 
 Algorithm is ported from [esbuild Bundle Size Analyzer](https://esbuild.github.io/analyze/) by [Evan Wallace](https://github.com/evanw).
 
+## Usage
+
+```ts
+import { Flamegraph, normalizeTreeNode, Sunburst, Treemap } from 'nanovis'
+
+const tree = normalizeTreeNode({
+  // ...
+})
+
+const flamegraph = new Flamegraph(tree) // or Sunburst(tree) or Treemap(tree)
+
+// Register events
+flamegraph.events.on('select', (node) => {
+  console.log(node)
+})
+flamegraph.events.on('hover', (node) => {
+  console.log(node)
+})
+
+// Mount the element to the DOM
+document.body.append(flamegraph.el)
+```
+
+The `tree` data should be in the following format:
+
+```ts
+/**
+ * Normalized TreeNode, can be created with `normalizeTreeNode` from a more flexible input.
+ */
+export interface TreeNode<T = undefined> {
+  /**
+   * Id of the node, should be unique within the tree.
+   * If created with `normalizeTreeNode`, this is will be generated with random string if not provided.
+   */
+  id: string
+  /**
+   * Text to display for the node.
+   */
+  text?: string
+  /**
+   * Subtext to display for the node.
+   */
+  subtext?: string
+  /**
+   * The size of the node itself, not including its children.
+   */
+  sizeSelf: number
+  /**
+   * Size of the node, used to calculate the area of the node.
+   * For a node with children, this is the size should be the sum of the sizes of all children.
+   * When creating the treeNode With `normalizeTreeNode`, this is calculated automatically.
+   */
+  size: number
+  /**
+   * Color of the node, used to color the node.
+   */
+  color?: ColorValue
+  /**
+   * Children of the node. Should be sorted by size in descending order.
+   */
+  children: TreeNode<T>[]
+  /**
+   * Parent of the node.
+   */
+  parent?: TreeNode<T>
+  /**
+   * Arbitrary metadata held by the node.
+   */
+  meta?: T
+}
+```
+
 ## License
 
 [MIT](./LICENSE) License

@@ -1,14 +1,19 @@
 .:
   colorToCanvasFill: function
   colorToCssBackground: function
+  CONSTANT_BOLD_FONT: string
+  CONSTANT_NORMAL_FONT: string
   createColorGetterFromMap: function
   createColorGetterSpectrum: function
-  createFlamegraph: function
-  createSunburst: function
-  createTreemap: function
   DEFAULT_GRAPH_OPTIONS: object
   DEFAULT_PALETTE: object
+  Flamegraph: function
+  getTreeMaxDepth: function
+  GraphBase: function
   hueAngleToColor: function
+  normalizeTreeNode: function
+  Sunburst: function
+  Treemap: function
 ./esbuild:
   createColorGetterFormats: function
   esbuildMetafileToTree: function
