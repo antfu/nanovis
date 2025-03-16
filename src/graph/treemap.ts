@@ -10,7 +10,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { GraphContext } from './context'
+import { GraphBase } from './base'
 
 const CONSTANT_PADDING = 4
 const CONSTANT_HEADER_HEIGHT = 20
@@ -124,7 +124,7 @@ export interface TreemapOptions<T> extends GraphBaseOptions<T> {
   selectedPaddingRatio?: number
 }
 
-export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
+export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   private layoutNodes: NodeLayout<T>[] = []
 
   private hoveredNode: TreeNode<T> | null = null
@@ -162,7 +162,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
           this.updateHover(e)
         }
         else if (layout !== this.currentLayout) {
-          this.changeCurrentNode(layout)
+          this.changeCurrentLayout(layout)
           this.changeHoveredNode(null)
         }
         else {
@@ -170,7 +170,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
         }
       }
       else if (this.currentNode) {
-        this.changeCurrentNode(null)
+        this.changeCurrentLayout(null)
         this.updateHover(e)
       }
     })
@@ -184,13 +184,11 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     this.disposables.push(useResizeEventListener(() => this.resize()))
   }
 
-  public select(node: TreeNode<T> | null, animate?: boolean) {
-    this.changeCurrentNode(
-      node
-        ? this.searchFor(this.layoutNodes, node)
-        : null,
-      animate,
-    )
+  public override select(node: TreeNode<T> | null, animate?: boolean) {
+    const layout = node
+      ? this.searchFor(this.layoutNodes, node)
+      : null
+    this.changeCurrentLayout(layout, animate)
   }
 
   public override draw(): void {
@@ -460,7 +458,7 @@ export class Treemap<T> extends GraphContext<T, TreemapOptions<T>> {
     return null
   }
 
-  private changeCurrentNode(node: NodeLayout<T> | null, animate = this.options.animate): void {
+  private changeCurrentLayout(node: NodeLayout<T> | null, animate = this.options.animate): void {
     if (this.currentNode !== node) {
       this.events.emit('select', node?.node || null)
       this.previousLayout = node ? this.currentLayout : null

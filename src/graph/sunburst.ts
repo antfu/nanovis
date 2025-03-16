@@ -7,7 +7,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { CONSTANT_BOLD_FONT, GraphContext } from './context'
+import { CONSTANT_BOLD_FONT, GraphBase } from './base'
 
 // eslint-disable-next-line no-restricted-syntax
 const enum FLAGS {
@@ -62,7 +62,7 @@ export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
 
 const START_ANGLE = -Math.PI / 2
 
-export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
+export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   private currentNode: TreeNode<T>
   private hoveredNode: TreeNode<T> | undefined
 
@@ -128,7 +128,7 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
 
       this.events.emit('click', node, e)
       if (node.children.length > 0) {
-        this.changeCurrentNode(node)
+        this.select(node)
         this.historyStack = stack
       }
       else {
@@ -144,8 +144,13 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     this.disposables.push(useWheelEventListener(e => this.handleMouseMove(e)))
   }
 
-  public select(node: TreeNode<T> | null, animate?: boolean): void {
-    this.changeCurrentNode(node, animate)
+  public override select(node: TreeNode<T> | null, animate?: boolean): void {
+    node = node || this.tree.root
+    if (this.currentNode !== node) {
+      this.currentNode = node
+      this.updateSunburst(animate)
+      this.events.emit('select', node)
+    }
   }
 
   public override resize(): void {
@@ -237,15 +242,6 @@ export class Sunburst<T> extends GraphContext<T, CreateSunburstOptions<T>> {
     }
 
     return tailEdge
-  }
-
-  private changeCurrentNode(node: TreeNode<T> | null, animate?: boolean): void {
-    node = node || this.tree.root
-    if (this.currentNode !== node) {
-      this.currentNode = node
-      this.updateSunburst(animate)
-      this.events.emit('select', node)
-    }
   }
 
   private changeHoveredNode(node: TreeNode<T> | undefined, animate?: boolean): void {

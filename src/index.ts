@@ -1,3 +1,4 @@
+export * from './graph/base'
 export * from './graph/flamegraph'
 export * from './graph/sunburst'
 export * from './graph/treemap'

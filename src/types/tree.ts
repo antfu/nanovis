@@ -1,4 +1,3 @@
-import type { GraphContext } from '../graph/context'
 import type { ColorValue, Palette } from './color'
 
 export interface TreeNode<T> {
@@ -36,10 +35,4 @@ export interface GraphBaseOptions<T> {
   onClick?: Events<T>['click']
   onLeave?: Events<T>['leave']
   onSelect?: Events<T>['select']
-}
-
-export interface GraphBase<T> extends GraphContext<T> {
-  draw: () => void
-  resize: () => void
-  select: (node: TreeNode<T> | null, animate?: boolean) => void
 }

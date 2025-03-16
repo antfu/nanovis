@@ -8,7 +8,7 @@ const CONSTANT_DOT_CHAR_CODE = 46
 export const CONSTANT_NORMAL_FONT = '14px sans-serif'
 export const CONSTANT_BOLD_FONT = `bold ${CONSTANT_NORMAL_FONT}`
 
-export class GraphContext<T, Options extends GraphBaseOptions<T>> {
+export class GraphBase<T, Options extends GraphBaseOptions<T>> {
   public readonly el: HTMLElement
 
   public readonly canvas: HTMLCanvasElement
@@ -104,6 +104,16 @@ export class GraphContext<T, Options extends GraphBaseOptions<T>> {
     this.canvas.height = Math.round(this.height * ratio)
     this.c.scale(ratio, ratio)
     this.draw()
+  }
+
+  /**
+   * Select a node. To be overridden by subclasses to implement custom selection logic.
+   *
+   * @param node - The node to select.
+   * @param _animate - Whether to animate the selection.
+   */
+  public select(node: TreeNode<T> | null, _animate?: boolean): void {
+    this.events.emit('select', node)
   }
 
   public dispose(): void {

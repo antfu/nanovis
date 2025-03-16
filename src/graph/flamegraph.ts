@@ -7,7 +7,7 @@ import {
   useResizeEventListener,
   useWheelEventListener,
 } from '../utils/helpers'
-import { CONSTANT_BOLD_FONT, CONSTANT_NORMAL_FONT, GraphContext } from './context'
+import { CONSTANT_BOLD_FONT, CONSTANT_NORMAL_FONT, GraphBase } from './base'
 
 // const CONSTANT_MARGIN = 50
 const CONSTANT_ROW_HEIGHT = 24
@@ -24,7 +24,7 @@ const enum FLAGS {
 export interface CreateFlamegraphOptions<T> extends GraphBaseOptions<T> {
 }
 
-export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
+export class Flamegraph<T> extends GraphBase<T, CreateFlamegraphOptions<T>> {
   private mainEl = document.createElement('div')
 
   private totalBytes: number
@@ -188,8 +188,7 @@ export class Flamegraph<T> extends GraphContext<T, CreateFlamegraphOptions<T>> {
     }
   }
 
-  public select(node: TreeNode<T> | null, animate = this.options.animate ?? DEFAULT_GRAPH_OPTIONS.animate): void {
-    this.changeHoveredNode(node)
+  public override select(node: TreeNode<T> | null, animate = this.options.animate ?? DEFAULT_GRAPH_OPTIONS.animate): void {
     this.changeSelectedNode(node, animate)
   }
 
