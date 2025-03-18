@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { TreeNode } from 'nanovis'
 import type { Metafile } from 'nanovis/esbuild'
-import { useMouse } from '@vueuse/core'
+import { useFps, useMouse } from '@vueuse/core'
 import { createColorGetterSpectrum, Flamegraph, Sunburst, Treemap } from 'nanovis'
 import { esbuildMetafileToTree } from 'nanovis/esbuild'
 import { onMounted, onUnmounted, reactive, shallowRef, useTemplateRef } from 'vue'
 import data from '../data/esbuild-analyze-example-metafile.json'
 
+const fps = useFps()
 const mouse = reactive(useMouse())
 const selected = shallowRef<TreeNode<any> | null>(null)
 
@@ -54,12 +55,15 @@ onMounted(() => {
 </script>
 
 <template>
+  <div fixed left-5 top-5 bg-black:75 px2 text-white font-mono>
+    fps: {{ fps }}
+  </div>
   <div ref="el-treemap" />
   <div ref="el-flamegraph" />
   <div ref="el-sunburst" :style="{ maxWidth: '500px' }" />
   <div
     v-if="selected"
-    style="position: absolute;background:#000;color:#fff;padding:2px 4px;border-radius:4px;"
+    bg-black:75 px1 text-white absolute text-sm
     :style="{
       left: `${mouse.x + 10}px`,
       top: `${mouse.y + 10}px`,

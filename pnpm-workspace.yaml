@@ -3,6 +3,8 @@ packages:
   - docs
   - packages/*
   - examples/*
+catalog:
+  unocss: 66.1.0-beta.5
 catalogs:
   cli:
     '@antfu/eslint-config': ^4.10.1

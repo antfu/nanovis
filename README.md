@@ -8,7 +8,14 @@
 
 Tiny visualization library for rendering tree structure in Treemap, Sunburst, Flame.
 
-Algorithm is ported from [esbuild Bundle Size Analyzer](https://esbuild.github.io/analyze/) by [Evan Wallace](https://github.com/evanw).
+Algorithm is ported from [esbuild Bundle Size Analyzer](https://esbuild.github.io/analyze/) by [Evan Wallace](https://github.com/evanw). Refactored heavily to make the logic more flexible and efficient.
+
+## Features
+
+- Canvas-based, more efficient
+- Interactive, animations
+- Flexible and customizable
+- Lightweight, zero-dependencies
 
 ## Usage
 
