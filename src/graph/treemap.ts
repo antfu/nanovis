@@ -138,6 +138,8 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
       base: null!,
     }
 
+  private baseLayoutCache: ImageData | undefined
+
   private currentOriginX = 0
   private currentOriginY = 0
   private animationStart = 0
@@ -195,30 +197,35 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     this.changeCurrentLayout(layout, animate)
   }
 
-  public override draw(): void {
+  public drawBaseLayout() {
+    if (!this.width || !this.height)
+      return
     this.c.clearRect(0, 0, this.width, this.height)
-    this.c.textBaseline = 'middle'
-    this.ellipsisWidth = this.c.measureText('...').width
+    this.bgOriginX = this.bgOriginY = 0
+    if (this.baseLayoutCache) {
+      this.c.putImageData(this.baseLayoutCache, 0, 0)
+    }
+    else {
+      this.drawLayout(this.layers.base, Culling.Disabled, [])
+      this.baseLayoutCache = this.c.getImageData(0, 0, this.width * this.ratio, this.height * this.ratio)
+    }
+  }
 
-    // Draw the full tree first
-    let _nodeContainingHover: NodeLayout<T> | null = null
-    let nodeContainingTarget: NodeLayout<T> | null = null
+  public override draw(): void {
     const transition = !this.layers.current
       ? 0
       : !this.animationSource
           ? this.animationBlend
           : !this.animationTarget ? 1 - this.animationBlend : 1
-    this.bgOriginX = this.bgOriginY = 0
-    const flags = this.drawLayout(this.layers.base, Culling.Enabled, [this.layers.previous, this.layers.current], false)
-    if (flags & DrawFlags.CONTAINS_HOVER)
-      _nodeContainingHover = this.layers.base
-    if (flags & DrawFlags.CONTAINS_TARGET)
-      nodeContainingTarget = this.layers.base
+
+    this.drawBaseLayout()
+    if (!this.layers.current)
+      this.drawHoverHighlight(this.layers.base)
 
     // Fade out nodes that are not activated
     if (this.layers.current) {
       const [x, y, w, h] = this.layers.base.box
-      this.c.globalAlpha = 0.6 * (!this.layers.current || (!this.animationSource && nodeContainingTarget && this.layers.base !== nodeContainingTarget)
+      this.c.globalAlpha = 0.6 * (!this.layers.current || (!this.animationSource)
         ? 1
         : transition)
       this.c.fillStyle = this.palette.bg
@@ -228,7 +235,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
     // Draw the previous node
     if (this.layers.previous) {
-      this.drawLayout(this.layers.previous, Culling.Enabled, [this.layers.current], true)
+      this.drawLayout(this.layers.previous, Culling.Enabled, [this.layers.current])
     }
 
     // Draw the current node on top
@@ -248,7 +255,8 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
       this.bgOriginX = this.currentOriginX
       this.bgOriginY = this.currentOriginY
-      this.drawLayout(this.layers.current, Culling.Disabled, [], true)
+      this.drawLayout(this.layers.current, Culling.Disabled, [])
+      this.drawHoverHighlight(this.layers.current)
     }
   }
 
@@ -278,6 +286,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   }
 
   public override resize(): void {
+    this.baseLayoutCache = undefined
     const oldWidth = this.width
     const oldHeight = this.height
     this.width = Math.min(this.el.clientWidth, 1600)
@@ -323,6 +332,30 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     return flags
   }
 
+  private drawHoverHighlight(
+    layout: NodeLayout<T>,
+  ): void {
+    const iter = this.iterateNodeToDraw(layout, Culling.Disabled, [])
+
+    const perviousComposite = this.c.globalCompositeOperation
+    while (true) {
+      const result = iter.next()
+      if (result.done) {
+        this.c.globalCompositeOperation = perviousComposite
+        return
+      }
+
+      const node = result.value.node
+      // Draw the hover highlight
+      if (this.hoveredNode === node) {
+        this.c.globalCompositeOperation = 'overlay'
+        const [x, y, w, h] = result.value.box
+        this.c.fillStyle = this.palette.hover
+        this.c.fillRect(x, y, w, h)
+      }
+    }
+  }
+
   private drawNodeBackground(
     layout: NodeLayout<T>,
     culling: Culling,
@@ -355,18 +388,15 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     layout: NodeLayout<T>,
     culling: Culling,
     cullingLayouts: (NodeLayout<T> | undefined)[],
-    inCurrentNode: boolean,
-  ): DrawFlags {
-    const flags = this.drawNodeBackground(layout, culling, cullingLayouts)
-    this.drawNodeForeground(layout, culling, cullingLayouts, inCurrentNode)
-    return flags
+  ): void {
+    this.drawNodeBackground(layout, culling, cullingLayouts)
+    this.drawNodeForeground(layout, culling, cullingLayouts)
   }
 
   private drawNodeForeground(
     layout: NodeLayout<T>,
     culling: Culling,
     cullingLayouts: (NodeLayout<T> | undefined)[],
-    inCurrentNode: boolean,
   ): void {
     const iter = this.iterateNodeToDraw(layout, culling, cullingLayouts)
 
@@ -377,12 +407,6 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
       const node = result.value.node
       const [x, y, w, h] = result.value.box
-
-      // Draw the hover highlight
-      if (this.hoveredNode === node && (!this.currentNode || inCurrentNode)) {
-        this.c.fillStyle = this.palette.hover
-        this.c.fillRect(x, y, w, h)
-      }
 
       strokeRectWithFirefoxBugWorkaround(this.c, this.palette.stroke, x + 0.5, y + 0.5, w, h)
 

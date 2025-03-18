@@ -169,8 +169,6 @@ export class Flamegraph<T = undefined> extends GraphBase<T, CreateFlamegraphOpti
 
   public override draw(): void {
     this.c.clearRect(0, 0, this.width, this.height)
-    this.c.textBaseline = 'middle'
-
     this.drawNode(this.root, 0, 0, -Infinity, FLAGS.ROOT)
   }
 

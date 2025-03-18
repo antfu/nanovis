@@ -16,6 +16,7 @@ export class GraphBase<T = undefined, Options extends GraphBaseOptions<T> = Grap
   public readonly c: CanvasRenderingContext2D
   public width = 0
   public height = 0
+  public ratio = 1
 
   public readonly root: TreeNode<T>
   public readonly maxDepth: number
@@ -100,12 +101,12 @@ export class GraphBase<T = undefined, Options extends GraphBaseOptions<T> = Grap
   public draw(): void {}
 
   public resize(): void {
-    const ratio = window.devicePixelRatio || 1
+    this.ratio = window.devicePixelRatio || 1
     this.canvas.style.width = `${this.width}px`
     this.canvas.style.height = `${this.height}px`
-    this.canvas.width = Math.round(this.width * ratio)
-    this.canvas.height = Math.round(this.height * ratio)
-    this.c.scale(ratio, ratio)
+    this.canvas.width = Math.round(this.width * this.ratio)
+    this.canvas.height = Math.round(this.height * this.ratio)
+    this.c.scale(this.ratio, this.ratio)
     this.draw()
   }
 
@@ -142,6 +143,7 @@ export class GraphBase<T = undefined, Options extends GraphBaseOptions<T> = Grap
   protected setFont(font: string) {
     this._font = font
     this.c.font = font
+    this.c.textBaseline = 'middle'
     this.ellipsisWidth = 3 * this.charCodeWidth(CONSTANT_DOT_CHAR_CODE)
   }
 
