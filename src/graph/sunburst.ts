@@ -53,8 +53,11 @@ function narrowSlice(root: TreeNode<any>, node: TreeNode<any>, slice: Slice): vo
   slice.depth_ += 1
 }
 
-function computeRadius(depth: number): number {
-  return 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
+const baseRadiusCache: Record<number, number> = {}
+function baseRadius(depth: number): number {
+  if (!baseRadiusCache[depth])
+    baseRadiusCache[depth] = 50 * 8 * Math.log(1 + Math.log(1 + depth / 8))
+  return baseRadiusCache[depth]
 }
 
 export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
@@ -69,6 +72,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   private centerX = 0
   private centerY = 0
   private animationStart = 0
+  private radiusScale = 1
 
   private sourceDepth = 0
   private sourceStartAngle = START_ANGLE
@@ -151,11 +155,13 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   }
 
   public override resize(): void {
-    const maxRadius = 2 * Math.ceil(computeRadius(this.maxDepth))
-    this.width = Math.min(Math.round(innerWidth * 0.4), maxRadius)
+    this.width = this.el.clientWidth
     this.height = this.width
     this.centerX = this.width >> 1
     this.centerY = this.height >> 1
+
+    const maxRadius = 2 * Math.ceil(baseRadius(this.maxDepth))
+    this.radiusScale = this.width / maxRadius
     super.resize()
   }
 
@@ -163,12 +169,12 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
     this.c.clearRect(0, 0, this.width, this.height)
 
     // Draw the fill first
-    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
+    this.drawNode(this.animatedNode, this.animatedDepth, this.computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT | FLAGS.FILL, -Infinity)
 
     // Draw the stroke second
     this.c.strokeStyle = this.palette.stroke
     this.c.beginPath()
-    this.drawNode(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT, -Infinity)
+    this.drawNode(this.animatedNode, this.animatedDepth, this.computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle, FLAGS.ROOT, -Infinity)
     this.c.stroke()
 
     // Draw the size of the current node in the middle
@@ -186,7 +192,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   // minimum slice width of 2px and we also skip drawing slices that
   // have a tail edge less than 1.5px from the previous tail edge.
   private drawNode(node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number, flags: FLAGS, prevTailEdge: number): number {
-    const outerRadius = computeRadius(depth + 1)
+    const outerRadius = this.computeRadius(depth + 1)
     if (outerRadius > this.centerY)
       return prevTailEdge // Don't draw slices that fall outside the canvas bounds
 
@@ -262,7 +268,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
     const mouseAngle = Math.atan2(y, x)
 
     const visit = (node: TreeNode<T>, depth: number, innerRadius: number, startAngle: number, sweepAngle: number): TreeNode<T> | undefined => {
-      const outerRadius = computeRadius(depth + 1)
+      const outerRadius = this.computeRadius(depth + 1)
       if (outerRadius > this.centerY)
         return undefined // Don't draw slices that fall outside the canvas bounds
 
@@ -293,7 +299,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
       return undefined
     }
 
-    return visit(this.animatedNode, this.animatedDepth, computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle)
+    return visit(this.animatedNode, this.animatedDepth, this.computeRadius(this.animatedDepth), this.animatedStartAngle, this.animatedSweepAngle)
   }
 
   override tick(): void {
@@ -338,6 +344,10 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
     else {
       this.events.emit('hover', null, e)
     }
+  }
+
+  private computeRadius(depth: number): number {
+    return baseRadius(depth) * this.radiusScale
   }
 
   private updateSunburst(animate: boolean = this.options.animate ?? true): void {
