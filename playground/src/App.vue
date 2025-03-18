@@ -12,7 +12,6 @@ const selected = shallowRef<TreeNode<any> | null>(null)
 
 const metafile = data as Metafile
 const tree = esbuildMetafileToTree(metafile)
-// tree.root.children.push(...structuredClone(tree.root.children))
 const getColor = createColorGetterSpectrum(tree)
 
 function onClick(_node: TreeNode<any>) {
@@ -33,15 +32,18 @@ const options = {
   // animate: false,
   // animateDuration: 1000,
 }
-const el = useTemplateRef('el')
+
+const elTreemap = useTemplateRef('el-treemap')
+const elFlamegraph = useTemplateRef('el-flamegraph')
+const elSunburst = useTemplateRef('el-sunburst')
 
 onMounted(() => {
   const treemap = new Treemap(tree, { ...options, getColor: createColorGetterSpectrum(tree, 0.6) })
-  el.value!.appendChild(treemap.el)
+  elTreemap.value!.appendChild(treemap.el)
   const flamegraph = new Flamegraph(tree, options)
-  el.value!.appendChild(flamegraph.el)
+  elFlamegraph.value!.appendChild(flamegraph.el)
   const sunburst = new Sunburst(tree, options)
-  el.value!.appendChild(sunburst.el)
+  elSunburst.value!.appendChild(sunburst.el)
 
   onUnmounted(() => {
     treemap.dispose()
@@ -52,7 +54,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div ref="el" />
+  <div ref="el-treemap" />
+  <div ref="el-flamegraph" />
+  <div ref="el-sunburst" :style="{ maxWidth: '500px' }" />
   <div
     v-if="selected"
     style="position: absolute;background:#000;color:#fff;padding:2px 4px;border-radius:4px;"
