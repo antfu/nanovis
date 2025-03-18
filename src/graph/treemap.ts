@@ -125,14 +125,18 @@ export interface TreemapOptions<T> extends GraphBaseOptions<T> {
 }
 
 export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
-  private layoutNodes: NodeLayout<T>[] = []
-
   private hoveredNode: TreeNode<T> | null = null
+  private currentNode: NodeLayout<T> | null = null
   private bgOriginX = 0
   private bgOriginY = 0
-  private currentNode: NodeLayout<T> | null = null
-  private currentLayout: NodeLayout<T> | null = null
-  private previousLayout: NodeLayout<T> | null = null
+
+  private layers: {
+    base: NodeLayout<T>
+    previous?: NodeLayout<T>
+    current?: NodeLayout<T>
+  } = {
+      base: null!,
+    }
 
   private currentOriginX = 0
   private currentOriginY = 0
@@ -161,7 +165,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
         if (!node.children.length) {
           this.updateHover(e)
         }
-        else if (layout !== this.currentLayout) {
+        else if (layout !== this.layers.current) {
           this.changeCurrentLayout(layout)
           this.changeHoveredNode(null)
         }
@@ -186,7 +190,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
   public override select(node: TreeNode<T> | null, animate?: boolean) {
     const layout = node
-      ? this.searchFor(this.layoutNodes, node)
+      ? this.searchFor([this.layers.base], node)
       : null
     this.changeCurrentLayout(layout, animate)
   }
@@ -199,43 +203,37 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     // Draw the full tree first
     let _nodeContainingHover: NodeLayout<T> | null = null
     let nodeContainingTarget: NodeLayout<T> | null = null
-    const transition = !this.currentLayout
+    const transition = !this.layers.current
       ? 0
       : !this.animationSource
           ? this.animationBlend
           : !this.animationTarget ? 1 - this.animationBlend : 1
     this.bgOriginX = this.bgOriginY = 0
-    for (const node of this.layoutNodes) {
-      const flags = this.drawNodeBackground(node, Culling.Enabled)
-      if (flags & DrawFlags.CONTAINS_HOVER)
-        _nodeContainingHover = node
-      if (flags & DrawFlags.CONTAINS_TARGET)
-        nodeContainingTarget = node
-    }
-    for (const node of this.layoutNodes) {
-      this.drawNodeForeground(node, false)
+    const flags = this.drawLayout(this.layers.base, Culling.Enabled, [this.layers.previous, this.layers.current], false)
+    if (flags & DrawFlags.CONTAINS_HOVER)
+      _nodeContainingHover = this.layers.base
+    if (flags & DrawFlags.CONTAINS_TARGET)
+      nodeContainingTarget = this.layers.base
 
-      // Fade out nodes that are not activated
-      if (this.currentLayout) {
-        const [x, y, w, h] = node.box
-        this.c.globalAlpha = 0.6 * (!this.currentLayout || (!this.animationSource && nodeContainingTarget && node !== nodeContainingTarget)
-          ? 1
-          : transition)
-        this.c.fillStyle = this.palette.bg
-        this.c.fillRect(x, y, w, h)
-        this.c.globalAlpha = 1
-      }
+    // Fade out nodes that are not activated
+    if (this.layers.current) {
+      const [x, y, w, h] = this.layers.base.box
+      this.c.globalAlpha = 0.6 * (!this.layers.current || (!this.animationSource && nodeContainingTarget && this.layers.base !== nodeContainingTarget)
+        ? 1
+        : transition)
+      this.c.fillStyle = this.palette.bg
+      this.c.fillRect(x, y, w, h)
+      this.c.globalAlpha = 1
     }
 
     // Draw the previous node
-    if (this.previousLayout) {
-      this.drawNodeBackground(this.previousLayout, Culling.Disabled)
-      this.drawNodeForeground(this.previousLayout, true)
+    if (this.layers.previous) {
+      this.drawLayout(this.layers.previous, Culling.Enabled, [this.layers.current], true)
     }
 
     // Draw the current node on top
-    if (this.currentLayout) {
-      const [x, y, w, h] = this.currentLayout.box
+    if (this.layers.current) {
+      const [x, y, w, h] = this.layers.current.box
       const matrix = this.c.getTransform()
       const scale = Math.sqrt(matrix.a * matrix.d)
 
@@ -250,8 +248,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
       this.bgOriginX = this.currentOriginX
       this.bgOriginY = this.currentOriginY
-      this.drawNodeBackground(this.currentLayout, Culling.Disabled)
-      this.drawNodeForeground(this.currentLayout, true)
+      this.drawLayout(this.layers.current, Culling.Disabled, [], true)
     }
   }
 
@@ -262,7 +259,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
     if (this.animationBlend < 0 || this.animationBlend > 1) {
       this.currentNode = this.animationTarget
-      this.previousLayout = null
+      this.layers.previous = undefined
       this.animationBlend = 1
     }
     else {
@@ -285,34 +282,62 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     const oldHeight = this.height
     this.width = Math.min(this.el.clientWidth, 1600)
     this.height = Math.max(Math.round(this.width / 2), innerHeight - 200)
-    if (this.width !== oldWidth || this.height !== oldHeight) {
-      this.layoutNodes = layoutTreemap([this.root], 0, 0, this.width - 1, this.height - 1)
+    if (this.width !== oldWidth || this.height !== oldHeight || !this.layers.base) {
+      this.layers.base = layoutTreemap([this.root], 0, 0, this.width - 1, this.height - 1)[0]
       this.updateCurrentLayout()
     }
     super.resize()
   }
 
-  private drawNodeBackground(layout: NodeLayout<T>, culling: Culling): DrawFlags {
+  private* iterateNodeToDraw(
+    layout: NodeLayout<T>,
+    culling: Culling,
+    cullingLayouts: (NodeLayout<T> | undefined)[],
+  ): Generator<NodeLayout<T>, DrawFlags> {
     const node = layout.node
     const [x, y, w, h] = layout.box
     let flags = (node === this.hoveredNode ? DrawFlags.CONTAINS_HOVER : 0)
       | (layout === this.animationTarget ? DrawFlags.CONTAINS_TARGET : 0)
 
     // Improve performance by not drawing backgrounds unnecessarily
-    if (culling === Culling.Enabled && this.currentLayout) {
-      const [cx, cy, cw, ch] = this.currentLayout.box
-      if (x >= cx && y >= cy && x + w <= cx + cw && y + h <= cy + ch) {
-        culling = Culling.Culled
+    if (culling === Culling.Enabled) {
+      for (const cullingLayout of cullingLayouts) {
+        if (!cullingLayout)
+          continue
+        const [cx, cy, cw, ch] = cullingLayout.box
+        if (x >= cx && y >= cy && x + w <= cx + cw && y + h <= cy + ch) {
+          culling = Culling.Culled
+          break
+        }
       }
     }
 
     for (const child of layout.children) {
-      flags |= this.drawNodeBackground(child, culling)
+      flags |= yield* this.iterateNodeToDraw(child, culling, cullingLayouts)
     }
 
     if (culling !== Culling.Culled) {
-      this.c.fillStyle = colorToCanvasFill(this.getColor(node) || this.palette.fallback, this.c, this.bgOriginX, this.bgOriginY, 1)
-      if (layout.children.length) {
+      yield layout
+    }
+
+    return flags
+  }
+
+  private drawNodeBackground(
+    layout: NodeLayout<T>,
+    culling: Culling,
+    cullingLayouts: (NodeLayout<T> | undefined)[],
+  ): DrawFlags {
+    const iter = this.iterateNodeToDraw(layout, culling, cullingLayouts)
+
+    while (true) {
+      const result = iter.next()
+      if (result.done)
+        return result.value
+
+      const [x, y, w, h] = result.value.box
+      this.c.fillStyle = colorToCanvasFill(this.getColor(result.value.node) || this.palette.fallback, this.c, this.bgOriginX, this.bgOriginY, 1)
+      if (result.value.children.length) {
         // Avoiding overdraw is probably a good idea...
         this.c.fillRect(x, y, w, CONSTANT_HEADER_HEIGHT)
         this.c.fillRect(x, y + h - CONSTANT_PADDING, w, CONSTANT_PADDING)
@@ -324,61 +349,78 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
         this.c.fillRect(x, y, w, h)
       }
     }
+  }
 
+  private drawLayout(
+    layout: NodeLayout<T>,
+    culling: Culling,
+    cullingLayouts: (NodeLayout<T> | undefined)[],
+    inCurrentNode: boolean,
+  ): DrawFlags {
+    const flags = this.drawNodeBackground(layout, culling, cullingLayouts)
+    this.drawNodeForeground(layout, culling, cullingLayouts, inCurrentNode)
     return flags
   }
 
-  private drawNodeForeground(layout: NodeLayout<T>, inCurrentNode: boolean): void {
-    const node = layout.node
-    const [x, y, w, h] = layout.box
+  private drawNodeForeground(
+    layout: NodeLayout<T>,
+    culling: Culling,
+    cullingLayouts: (NodeLayout<T> | undefined)[],
+    inCurrentNode: boolean,
+  ): void {
+    const iter = this.iterateNodeToDraw(layout, culling, cullingLayouts)
 
-    // Draw the hover highlight
-    if (this.hoveredNode === node && (!this.currentNode || inCurrentNode)) {
-      this.c.fillStyle = this.palette.hover
-      this.c.fillRect(x, y, w, h)
-    }
+    while (true) {
+      const result = iter.next()
+      if (result.done)
+        return
 
-    strokeRectWithFirefoxBugWorkaround(this.c, this.palette.stroke, x + 0.5, y + 0.5, w, h)
+      const node = result.value.node
+      const [x, y, w, h] = result.value.box
 
-    if (h >= CONSTANT_HEADER_HEIGHT) {
-      this.c.fillStyle = this.palette.text
-
-      // Measure the node name
-      const maxWidth = w - CONSTANT_INSET_X
-      const textY = y + Math.round(CONSTANT_INSET_Y / 2)
-      const [nameText, nameWidth] = this.textOverflowEllipsis(this.getText(node) || '', maxWidth)
-      let textX = x + Math.round((w - nameWidth) / 2)
-
-      const text = this.getText(node)
-      const subtext = this.getSubtext(node)
-      // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
-      if (nameText === text && node.children.length) {
-        let detailText = subtext || ''
-        if (detailText && text)
-          detailText = ` - ${detailText}`
-        const [sizeText, sizeWidth] = this.textOverflowEllipsis(detailText, maxWidth - nameWidth)
-        textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
-        this.c.globalAlpha = 0.5
-        this.c.fillText(sizeText, textX + nameWidth, textY)
-        this.c.globalAlpha = 1
+      // Draw the hover highlight
+      if (this.hoveredNode === node && (!this.currentNode || inCurrentNode)) {
+        this.c.fillStyle = this.palette.hover
+        this.c.fillRect(x, y, w, h)
       }
 
-      // Draw the node name
-      this.c.fillText(nameText, textX, textY)
+      strokeRectWithFirefoxBugWorkaround(this.c, this.palette.stroke, x + 0.5, y + 0.5, w, h)
 
-      // Draw the node detail (only if there's enough space and only for leaf nodes)
-      if (h > CONSTANT_INSET_Y + 16 && !node.children.length) {
-        const [sizeText, sizeWidth] = this.textOverflowEllipsis(subtext || '', maxWidth)
-        this.c.globalAlpha = 0.5
-        // Handle the case where title is empty
-        const headerHeight = text ? CONSTANT_HEADER_HEIGHT : (CONSTANT_HEADER_HEIGHT / 2 + CONSTANT_PADDING)
-        this.c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + headerHeight + Math.round(h - CONSTANT_INSET_Y) / 2)
-        this.c.globalAlpha = 1
-      }
+      if (h >= CONSTANT_HEADER_HEIGHT) {
+        this.c.fillStyle = this.palette.text
 
-      // Draw the children
-      for (const child of layout.children) {
-        this.drawNodeForeground(child, inCurrentNode)
+        // Measure the node name
+        const maxWidth = w - CONSTANT_INSET_X
+        const textY = y + Math.round(CONSTANT_INSET_Y / 2)
+        const [nameText, nameWidth] = this.textOverflowEllipsis(this.getText(node) || '', maxWidth)
+        let textX = x + Math.round((w - nameWidth) / 2)
+
+        const text = this.getText(node)
+        const subtext = this.getSubtext(node)
+        // Measure and draw the node detail (but only if there's more space and not for leaf nodes)
+        if (nameText === text && node.children.length) {
+          let detailText = subtext || ''
+          if (detailText && text)
+            detailText = ` - ${detailText}`
+          const [sizeText, sizeWidth] = this.textOverflowEllipsis(detailText, maxWidth - nameWidth)
+          textX = x + Math.round((w - nameWidth - sizeWidth) / 2)
+          this.c.globalAlpha = 0.5
+          this.c.fillText(sizeText, textX + nameWidth, textY)
+          this.c.globalAlpha = 1
+        }
+
+        // Draw the node name
+        this.c.fillText(nameText, textX, textY)
+
+        // Draw the node detail (only if there's enough space and only for leaf nodes)
+        if (h > CONSTANT_INSET_Y + 16 && !node.children.length) {
+          const [sizeText, sizeWidth] = this.textOverflowEllipsis(subtext || '', maxWidth)
+          this.c.globalAlpha = 0.5
+          // Handle the case where title is empty
+          const headerHeight = text ? CONSTANT_HEADER_HEIGHT : (CONSTANT_HEADER_HEIGHT / 2 + CONSTANT_PADDING)
+          this.c.fillText(sizeText, x + Math.round((w - sizeWidth) / 2), y + headerHeight + Math.round(h - CONSTANT_INSET_Y) / 2)
+          this.c.globalAlpha = 1
+        }
       }
     }
   }
@@ -399,12 +441,12 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
       const x2 = Math.round(ox2 + (nx2 - ox2) * t)
       const y2 = Math.round(oy2 + (ny2 - oy2) * t)
       const wrap64 = (x: number) => x - Math.floor(x / 64 - 0.5) * 64
-      this.currentLayout = layoutTreemap([this.currentNode.node], x1, y1, x2 - x1, y2 - y1)[0]
+      this.layers.current = layoutTreemap([this.currentNode.node], x1, y1, x2 - x1, y2 - y1)[0]
       this.currentOriginX = wrap64(-(ox1 + ox2) / 2) * (1 - t) + (x1 + x2) / 2
       this.currentOriginY = wrap64(-(oy1 + oy2) / 2) * (1 - t) + (y1 + y2) / 2
     }
     else {
-      this.currentLayout = null
+      this.layers.current = undefined
       this.currentOriginX = 0
       this.currentOriginY = 0
     }
@@ -428,9 +470,9 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
       return null
     }
 
-    return this.currentLayout
-      ? visit([this.currentLayout], false)
-      : visit(this.layoutNodes, true)
+    return this.layers.current
+      ? visit([this.layers.current], false)
+      : visit([this.layers.base], true)
   }
 
   private updateHover(e: MouseEvent): void {
@@ -451,7 +493,9 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
   private searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
     for (const child of children) {
-      const result = child.node === node ? child : this.searchFor(child.children, node)
+      const result = child.node === node
+        ? child
+        : this.searchFor(child.children, node)
       if (result)
         return result
     }
@@ -461,14 +505,14 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   private changeCurrentLayout(node: NodeLayout<T> | null, animate = this.options.animate): void {
     if (this.currentNode !== node) {
       this.events.emit('select', node?.node || null)
-      this.previousLayout = node ? this.currentLayout : null
+      this.layers.previous = node ? this.layers.current : undefined
       if (animate) {
         this.animationBlend = 0
         this.animationStart = now()
         this.animationSource = this.currentNode
       }
       this.animationTarget = node
-      this.currentNode = node || this.searchFor(this.layoutNodes, this.currentNode!.node)
+      this.currentNode = node || this.searchFor([this.layers.base], this.currentNode!.node)
       this.updateCurrentLayout()
       this.invalidate()
     }
