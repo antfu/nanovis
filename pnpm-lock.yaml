@@ -10,8 +10,8 @@ catalogs:
       specifier: ^4.10.1
       version: 4.10.1
     '@antfu/ni':
-      specifier: ^24.2.0
-      version: 24.2.0
+      specifier: ^24.3.0
+      version: 24.3.0
     bumpp:
       specifier: ^10.1.0
       version: 10.1.0
@@ -25,8 +25,8 @@ catalogs:
       specifier: ^15.5.0
       version: 15.5.0
     simple-git-hooks:
-      specifier: ^2.11.1
-      version: 2.11.1
+      specifier: ^2.12.1
+      version: 2.12.1
     tsx:
       specifier: ^4.19.3
       version: 4.19.3
@@ -39,6 +39,10 @@ catalogs:
     vite:
       specifier: ^6.2.2
       version: 6.2.2
+  default:
+    unocss:
+      specifier: 66.1.0-beta.5
+      version: 66.1.0-beta.5
   frontend:
     nanoevents:
       specifier: ^9.1.0
@@ -58,7 +62,7 @@ catalogs:
       specifier: ^3.5.13
       version: 3.5.13
     vue-tsc:
-      specifier: ^2.2.4
+      specifier: ^2.2.8
       version: 2.2.8
   testing:
     vitest:
@@ -88,7 +92,7 @@ importers:
         version: 4.10.1(@typescript-eslint/utils@8.26.1(eslint@9.22.0(jiti@2.4.2))(typescript@5.8.2))(@vue/compiler-sfc@3.5.13)(eslint@9.22.0(jiti@2.4.2))(typescript@5.8.2)(vitest@3.0.9(@types/debug@4.1.12)(@types/node@22.13.10)(jiti@2.4.2)(tsx@4.19.3)(yaml@2.7.0))
       '@antfu/ni':
         specifier: catalog:cli
-        version: 24.2.0
+        version: 24.3.0
       '@antfu/utils':
         specifier: catalog:inlined
         version: 9.1.0
@@ -112,7 +116,7 @@ importers:
         version: 9.1.0
       simple-git-hooks:
         specifier: catalog:cli
-        version: 2.11.1
+        version: 2.12.1
       tinyexec:
         specifier: catalog:utils
         version: 0.3.2
@@ -150,7 +154,7 @@ importers:
         specifier: catalog:playground
         version: 13.0.0(vue@3.5.13(typescript@5.8.2))
       unocss:
-        specifier: 66.1.0-beta.5
+        specifier: 'catalog:'
         version: 66.1.0-beta.5(postcss@8.5.3)(vite@6.2.2(@types/node@22.13.10)(jiti@2.4.2)(tsx@4.19.3)(yaml@2.7.0))(vue@3.5.13(typescript@5.8.2))
       vue:
         specifier: catalog:playground
@@ -224,8 +228,8 @@ packages:
   '@antfu/install-pkg@1.0.0':
     resolution: {integrity: sha512-xvX6P/lo1B3ej0OsaErAjqgFYzYVcJpamjLAFLYh9vRJngBrMoUG7aVnrGTeqM7yxbyTD5p3F2+0/QUEh8Vzhw==}
 
-  '@antfu/ni@24.2.0':
-    resolution: {integrity: sha512-+B9wzpv+KOhqbOgHjHcBAX7IwIKdDt4SFzYlxIPr4srANFJfjAABC7nU8KNFba+DYLymRe2EPSUfE7+reJb5UA==}
+  '@antfu/ni@24.3.0':
+    resolution: {integrity: sha512-wBSav4mBxvHEW9RbdSo1SWLQ6MAlT0Dc423weC58yOWqW4OcMvtnNDdDrxOZeJ88fEIyPK93gDUWIelBxzSf8g==}
     hasBin: true
 
   '@antfu/utils@8.1.1':
@@ -2301,6 +2305,9 @@ packages:
   package-manager-detector@1.0.0:
     resolution: {integrity: sha512-7elnH+9zMsRo7aS72w6MeRugTpdRvInmEB4Kmm9BVvPw/SLG8gXUGQ+4wF0Mys0RSWPz0B9nuBbDe8vFeA2sfg==}
 
+  package-manager-detector@1.1.0:
+    resolution: {integrity: sha512-Y8f9qUlBzW8qauJjd/eu6jlpJZsuPJm2ZAV0cDVd420o4EdpH5RPdoCv+60/TdJflGatr4sDfpAL6ArWZbM5tA==}
+
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -2678,8 +2685,8 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  simple-git-hooks@2.11.1:
-    resolution: {integrity: sha512-tgqwPUMDcNDhuf1Xf6KTUsyeqGdgKMhzaH4PAZZuzguOgTl5uuyeYe/8mWgAr6IBxB5V06uqEf6Dy37gIWDtDg==}
+  simple-git-hooks@2.12.1:
+    resolution: {integrity: sha512-NB3V4XyCOrWTIhjh85DyEoVlM3adHWwqQXKYHmuegy/108bJPP6YxuPGm4ZKBq1+GVKRbKJuzNY//09cMJYp+A==}
     hasBin: true
 
   sirv@3.0.1:
@@ -2788,6 +2795,9 @@ packages:
 
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
+
+  tinyexec@1.0.0:
+    resolution: {integrity: sha512-djtKaAR3lnRo0uMT/IKYwj3s4E86IE/SdwCE3XXIJcozbDFKsfgAmi8IBIpIDmTd0Y6YKyfqo3vQ33OloPJPaQ==}
 
   tinyglobby@0.2.12:
     resolution: {integrity: sha512-qkf4trmKSIiMTs/E63cxH+ojC2unam7rJ0WrauAzpT3ECNTxGRMlaXxVbfxMUC/w0LaYk6jQ4y/nGR9uBO3tww==}
@@ -3114,12 +3124,12 @@ snapshots:
       package-manager-detector: 0.2.11
       tinyexec: 0.3.2
 
-  '@antfu/ni@24.2.0':
+  '@antfu/ni@24.3.0':
     dependencies:
       ansis: 3.17.0
       fzf: 0.5.2
-      package-manager-detector: 1.0.0
-      tinyexec: 0.3.2
+      package-manager-detector: 1.1.0
+      tinyexec: 1.0.0
 
   '@antfu/utils@8.1.1': {}
 
@@ -5428,6 +5438,8 @@ snapshots:
 
   package-manager-detector@1.0.0: {}
 
+  package-manager-detector@1.1.0: {}
+
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
@@ -5787,7 +5799,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-git-hooks@2.11.1: {}
+  simple-git-hooks@2.12.1: {}
 
   sirv@3.0.1:
     dependencies:
@@ -5892,6 +5904,8 @@ snapshots:
   tinybench@2.9.0: {}
 
   tinyexec@0.3.2: {}
+
+  tinyexec@1.0.0: {}
 
   tinyglobby@0.2.12:
     dependencies:
