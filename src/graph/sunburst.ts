@@ -146,9 +146,8 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   }
 
   public override select(node: TreeNode<T> | null, animate?: boolean): void {
-    node = node || this.root
-    if (this.currentNode !== node) {
-      this.currentNode = node
+    if (this.currentNode !== node || this.root) {
+      this.currentNode = node || this.root
       this.updateSunburst(animate)
       this.events.emit('select', node)
     }

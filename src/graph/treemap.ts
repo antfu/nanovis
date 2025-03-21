@@ -191,9 +191,11 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   }
 
   public override select(node: TreeNode<T> | null, animate?: boolean) {
-    const layout = node
-      ? this.searchFor([this.layers.base], node)
-      : null
+    let layout: NodeLayout<T> | null = null
+    if (node)
+      layout = this.searchFor([this.layers.current, this.layers.base], node)
+    else
+      layout = null
     this.changeCurrentLayout(layout, animate)
   }
 
@@ -212,15 +214,16 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   }
 
   public override draw(): void {
+    this.drawBaseLayout()
+
+    if (!this.layers.current)
+      this.drawHoverHighlight(this.layers.base)
+
     const transition = !this.layers.current
       ? 0
       : !this.animationSource
           ? this.animationBlend
           : !this.animationTarget ? 1 - this.animationBlend : 1
-
-    this.drawBaseLayout()
-    if (!this.layers.current)
-      this.drawHoverHighlight(this.layers.base)
 
     // Fade out nodes that are not activated
     if (this.layers.current) {
@@ -515,8 +518,10 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     }
   }
 
-  private searchFor(children: NodeLayout<T>[], node: TreeNode<T>): NodeLayout<T> | null {
+  private searchFor(children: (NodeLayout<T> | undefined)[], node: TreeNode<T>): NodeLayout<T> | null {
     for (const child of children) {
+      if (!child)
+        continue
       const result = child.node === node
         ? child
         : this.searchFor(child.children, node)
@@ -527,18 +532,18 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   }
 
   private changeCurrentLayout(node: NodeLayout<T> | null, animate = this.options.animate): void {
-    if (this.currentNode !== node) {
-      this.events.emit('select', node?.node || null)
-      this.layers.previous = node ? this.layers.current : undefined
-      if (animate) {
-        this.animationBlend = 0
-        this.animationStart = now()
-        this.animationSource = this.currentNode
-      }
-      this.animationTarget = node
-      this.currentNode = node || this.searchFor([this.layers.base], this.currentNode!.node)
-      this.updateCurrentLayout()
-      this.invalidate()
+    if (this.animationTarget === node)
+      return
+    this.events.emit('select', node?.node || null)
+    this.layers.previous = node ? this.layers.current : undefined
+    if (animate) {
+      this.animationBlend = 0
+      this.animationStart = now()
+      this.animationSource = this.currentNode
     }
+    this.animationTarget = node
+    this.currentNode = node || this.searchFor([this.layers.base], this.currentNode!.node)
+    this.updateCurrentLayout()
+    this.invalidate()
   }
 }
