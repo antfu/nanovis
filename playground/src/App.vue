@@ -31,7 +31,7 @@ const options: GraphBaseOptions = {
     hovering.value = null
   },
   // animate: false,
-  animateDuration: 1000,
+  // animateDuration: 1000,
 }
 
 const elTreemap = useTemplateRef('el-treemap')

@@ -192,6 +192,8 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
 
   public override select(node: TreeNode<T> | null, animate?: boolean) {
     let layout: NodeLayout<T> | null = null
+    if (node === this.root)
+      node = null
     if (node)
       layout = this.searchFor([this.layers.current, this.layers.base], node)
     else
