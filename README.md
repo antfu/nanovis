@@ -10,6 +10,10 @@ Tiny visualization library for rendering tree structure in Treemap, Sunburst, Fl
 
 Algorithm is ported from [esbuild Bundle Size Analyzer](https://esbuild.github.io/analyze/) by [Evan Wallace](https://github.com/evanw). Refactored heavily to make the logic more flexible and efficient.
 
+![Image](https://github.com/user-attachments/assets/63474223-e691-4969-b94a-1aab4323ab19)
+
+![Image](https://github.com/user-attachments/assets/34282c56-327a-47b6-b3a0-650334728ba8)
+
 ## Features
 
 - Canvas-based, more efficient
