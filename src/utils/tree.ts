@@ -9,6 +9,9 @@ export function normalizeTreeNode<T>(
   parent?: TreeNode<T>,
   sort: false | ((a: TreeNode<T>, b: TreeNode<T>) => number) = (a, b) => b.size - a.size,
 ): TreeNode<T> {
+  if ((node as any).__nanovis)
+    return node as any
+
   const normalized: TreeNode<T> = {
     ...node,
   } as any
@@ -25,6 +28,7 @@ export function normalizeTreeNode<T>(
   if (sort)
     normalized.children.sort(sort)
 
+  Object.defineProperty(normalized, '__nanovis', { enumerable: false, value: true })
   return normalized
 }
 
