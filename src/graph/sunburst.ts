@@ -253,15 +253,10 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
   }
 
   private hitTestNode(mouseEvent: MouseEvent): TreeNode<T> | undefined {
-    let x = mouseEvent.pageX
-    let y = mouseEvent.pageY
-    for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
-      x -= el.offsetLeft
-      y -= el.offsetTop
-    }
+    const rect = this.canvas.getBoundingClientRect()
+    const x = mouseEvent.clientX - rect.left - this.centerX
+    const y = mouseEvent.clientY - rect.top - this.centerY
 
-    x -= this.centerX
-    y -= this.centerY
     const mouseRadius = Math.sqrt(x * x + y * y)
     const mouseAngle = Math.atan2(y, x)
 

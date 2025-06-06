@@ -304,12 +304,9 @@ export class Flamegraph<T = undefined> extends GraphBase<T, CreateFlamegraphOpti
   }
 
   private hitTestNode(mouseEvent: MouseEvent | WheelEvent): TreeNode<T> | null {
-    let mouseX = mouseEvent.pageX
-    let mouseY = mouseEvent.pageY
-    for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
-      mouseX -= el.offsetLeft
-      mouseY -= el.offsetTop
-    }
+    const rect = this.canvas.getBoundingClientRect()
+    const mouseX = mouseEvent.clientX - rect.left
+    const mouseY = mouseEvent.clientY - rect.top
 
     const mouseBytes = this.viewportMin + (this.viewportMax - this.viewportMin) / this.zoomedOutWidth * (mouseX - this.zoomedOutMin)
 

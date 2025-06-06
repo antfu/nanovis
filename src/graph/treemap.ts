@@ -482,12 +482,9 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
   }
 
   private hitTestNode(mouseEvent: MouseEvent | WheelEvent): NodeLayout<T> | null {
-    let mouseX = mouseEvent.pageX
-    let mouseY = mouseEvent.pageY
-    for (let el: HTMLElement | null = this.canvas; el; el = el.offsetParent as HTMLElement | null) {
-      mouseX -= el.offsetLeft
-      mouseY -= el.offsetTop
-    }
+    const rect = this.canvas.getBoundingClientRect()
+    const mouseX = mouseEvent.clientX - rect.left
+    const mouseY = mouseEvent.clientY - rect.top
 
     const visit = (nodes: NodeLayout<T>[], isTopLevel: boolean): NodeLayout<T> | null => {
       for (const node of nodes) {
