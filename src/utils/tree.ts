@@ -10,6 +10,7 @@ export function normalizeTreeNode<T>(node: TreeNodeInput<T>, parent?: TreeNode<T
   } as any
   normalized.id ||= randomStr()
   normalized.parent ||= parent
+  normalized.children ||= []
   if (normalized.sizeSelf == null && normalized.size != null && normalized.children.length === 0)
     normalized.sizeSelf = normalized.size
   else
