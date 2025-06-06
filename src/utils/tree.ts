@@ -4,7 +4,11 @@ import { randomStr } from '@antfu/utils'
 /**
  * Allow to create the TreeNode with more flexible input.
  */
-export function normalizeTreeNode<T>(node: TreeNodeInput<T>, parent?: TreeNode<T>): TreeNode<T> {
+export function normalizeTreeNode<T>(
+  node: TreeNodeInput<T>,
+  parent?: TreeNode<T>,
+  sort: false | ((a: TreeNode<T>, b: TreeNode<T>) => number) = (a, b) => b.size - a.size,
+): TreeNode<T> {
   const normalized: TreeNode<T> = {
     ...node,
   } as any
@@ -15,9 +19,11 @@ export function normalizeTreeNode<T>(node: TreeNodeInput<T>, parent?: TreeNode<T
     normalized.sizeSelf = normalized.size
   else
     normalized.sizeSelf ||= 0
-  normalized.children = (normalized.children || []).map(child => normalizeTreeNode(child, normalized))
+  normalized.children = (normalized.children || []).map(child => normalizeTreeNode(child, normalized, sort))
   normalized.size ||= normalized.children.reduce((acc, child) => acc + child.size, 0) + normalized.sizeSelf
-  normalized.children.sort((a, b) => b.size - a.size)
+
+  if (sort)
+    normalized.children.sort(sort)
 
   return normalized
 }
