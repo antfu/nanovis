@@ -61,7 +61,6 @@ function baseRadius(depth: number): number {
 }
 
 export interface CreateSunburstOptions<T> extends GraphBaseOptions<T> {
-  sizeFormatter?: (size: number) => string
 }
 
 const START_ANGLE = -Math.PI / 2
@@ -91,7 +90,6 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
 
   private previousHoveredNode: TreeNode<T> | undefined
   private historyStack: TreeNode<T>[] = []
-  private sizeFormatter: (size: number) => string
 
   constructor(tree: TreeNode<T>, options: CreateSunburstOptions<T> = {}) {
     while (tree.children.length === 1) {
@@ -102,7 +100,6 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
     this.currentNode = tree
     this.targetNode = this.currentNode
     this.animatedNode = this.currentNode
-    this.sizeFormatter = options.sizeFormatter ?? bytesToText
 
     this.canvas.onmousemove = (e) => {
       this.handleMouseMove(e)
@@ -184,7 +181,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
       this.c.fillStyle = this.palette.stroke
       this.setFont(CONSTANT_BOLD_FONT)
       this.c.textAlign = 'center'
-      this.c.fillText(this.sizeFormatter(this.targetNode.size), this.centerX, this.centerY)
+      this.c.fillText(this.getSubtext(this.targetNode) ?? bytesToText(this.targetNode.size), this.centerX, this.centerY)
     }
   }
 
