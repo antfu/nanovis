@@ -13,7 +13,14 @@
     "url": "git+https://github.com/antfu/nanovis.git"
   },
   "bugs": "https://github.com/antfu/nanovis/issues",
-  "keywords": [],
+  "keywords": [
+    "tree",
+    "treemap",
+    "sunburst",
+    "flamegraph",
+    "graph",
+    "chart"
+  ],
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs",
@@ -32,7 +39,7 @@
     "lint": "eslint",
     "prepublishOnly": "nr build",
     "play": "nr -C playground dev",
-    "release": "bumpp && pnpm publish",
+    "release": "bumpp",
     "start": "tsx src/index.ts",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit",
