@@ -135,8 +135,8 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     previous?: NodeLayout<T>
     current?: NodeLayout<T>
   } = {
-      base: null!,
-    }
+    base: null!,
+  }
 
   private baseLayoutCache: ImageData | undefined
 
