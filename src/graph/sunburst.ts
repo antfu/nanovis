@@ -181,7 +181,7 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
       this.c.fillStyle = this.palette.stroke
       this.setFont(CONSTANT_BOLD_FONT)
       this.c.textAlign = 'center'
-      this.c.fillText(bytesToText(this.targetNode.size), this.centerX, this.centerY)
+      this.c.fillText(this.getSubtext(this.targetNode) ?? bytesToText(this.targetNode.size), this.centerX, this.centerY)
     }
   }
 
