@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@vueuse/core": "catalog:playground",
-    "unocss": "catalog:",
+    "unocss": "catalog:playground",
     "vue": "catalog:playground"
   },
   "devDependencies": {
