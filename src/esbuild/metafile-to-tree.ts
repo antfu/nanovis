@@ -127,7 +127,7 @@ export function accumulatePath(root: TreeNodeInProgress, path: string, bytesInOu
     const name = part + (i + 1 < n ? '/' : '')
     inputPath += name
 
-    if (!Object.prototype.hasOwnProperty.call(children, part)) {
+    if (!Object.hasOwn(children, part)) {
       child = {
         text: name,
         id: inputPath,

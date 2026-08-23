@@ -105,7 +105,7 @@ describe('graph drawing', () => {
     })
   })
 
-  it('recomputes dynamic treemap colors after hover invalidates the graph', async () => {
+  it('keeps the treemap base layout cache for hover redraws', async () => {
     const { Treemap } = await import('../src/graph/treemap')
     let hovered: TreeNode | null = null
     const getColor = vi.fn((node: TreeNode) => node === hovered ? '#fff' : '#000')
@@ -119,6 +119,23 @@ describe('graph drawing', () => {
 
     graph.canvas.dispatchEvent({ type: 'mousemove', clientX: 10, clientY: 30 } as MouseEvent)
     expect((hovered as TreeNode | null)?.id).toBe('child')
+    expect(frames).toHaveLength(1)
+    frames.shift()!(0)
+
+    expect(context.putImageData).toHaveBeenCalled()
+    expect(getColor).not.toHaveBeenCalled()
+  })
+
+  it('recomputes dynamic treemap colors after an explicit invalidation', async () => {
+    const { Treemap } = await import('../src/graph/treemap')
+    let highlighted = false
+    const getColor = vi.fn(() => highlighted ? '#fff' : '#000')
+    const graph = new Treemap(createTree(), { animate: false, getColor })
+    await Promise.resolve()
+    getColor.mockClear()
+    highlighted = true
+
+    graph.invalidate()
     expect(frames).toHaveLength(1)
     frames.shift()!(0)
 
