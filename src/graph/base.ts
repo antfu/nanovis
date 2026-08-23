@@ -100,6 +100,19 @@ export class GraphBase<T = undefined, Options extends GraphBaseOptions<T> = Grap
    */
   public draw(): void {}
 
+  protected didDraw(): void {
+    if (!this.options.onDidDraw)
+      return
+
+    this.c.save()
+    try {
+      this.options.onDidDraw(this.c)
+    }
+    finally {
+      this.c.restore()
+    }
+  }
+
   public resize(): void {
     this.ratio = window.devicePixelRatio || 1
     this.canvas.style.width = `${this.width}px`

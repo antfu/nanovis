@@ -170,6 +170,7 @@ export class Flamegraph<T = undefined> extends GraphBase<T, CreateFlamegraphOpti
   public override draw(): void {
     this.c.clearRect(0, 0, this.width, this.height)
     this.drawNode(this.root, 0, 0, -Infinity, FLAGS.ROOT)
+    this.didDraw()
   }
 
   private changeSelectedNode(node: TreeNode<T> | null, animate = this.options.animate ?? DEFAULT_GRAPH_OPTIONS.animate): void {

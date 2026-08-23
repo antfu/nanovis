@@ -63,6 +63,10 @@ export interface GraphBaseOptions<T = undefined> {
   getColor?: (node: TreeNode<T>) => ColorValue | undefined
   getText?: (node: TreeNode<T>) => string | undefined
   getSubtext?: (node: TreeNode<T>) => string | undefined
+  /**
+   * Called after the graph has finished drawing, for custom canvas drawing.
+   */
+  onDidDraw?: (ctx: CanvasRenderingContext2D) => void
   palette?: Partial<Palette>
   animate?: boolean
   animateDuration?: number

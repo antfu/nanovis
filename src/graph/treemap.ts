@@ -263,6 +263,13 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
       this.drawLayout(this.layers.current, Culling.Disabled, [])
       this.drawHoverHighlight(this.layers.current)
     }
+
+    this.didDraw()
+  }
+
+  public override invalidate(): void {
+    this.baseLayoutCache = undefined
+    super.invalidate()
   }
 
   public override tick(): void {
@@ -280,7 +287,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
       this.animationBlend = 1 - this.animationBlend
       this.animationBlend *= this.animationBlend * this.animationBlend
       this.animationBlend = 1 - this.animationBlend
-      this.invalidate()
+      super.invalidate()
     }
 
     if (this.animationBlend !== oldAnimationBlend || this.currentNode !== oldCurrentNode) {
@@ -513,7 +520,7 @@ export class Treemap<T> extends GraphBase<T, TreemapOptions<T>> {
     if (this.hoveredNode !== node) {
       this.hoveredNode = node
       this.canvas.style.cursor = node && !node.children.length ? 'pointer' : 'auto'
-      this.invalidate()
+      super.invalidate()
     }
   }
 

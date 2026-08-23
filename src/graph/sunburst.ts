@@ -183,6 +183,8 @@ export class Sunburst<T> extends GraphBase<T, CreateSunburstOptions<T>> {
       this.c.textAlign = 'center'
       this.c.fillText(this.getSubtext(this.targetNode) ?? bytesToText(this.targetNode.size), this.centerX, this.centerY)
     }
+
+    this.didDraw()
   }
 
   // We want to avoid overlapping strokes from lots of really small adjacent
