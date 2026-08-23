@@ -1,7 +1,7 @@
 {
   "name": "nanovis",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "packageManager": "pnpm@11.22.0",
   "description": "Nanovis",
   "author": "Anthony Fu <anthonyfu117@hotmail.com>",
